@@ -1,32 +1,28 @@
-// Regras de dinheiro. Todos os valores são em CENTAVOS (número inteiro),
+// Regras de dinheiro. Valores em reais são sempre em CENTAVOS (número inteiro),
 // para nunca ter erro de arredondamento com casas decimais.
 
-// Quanto vale 1 KN Coin em centavos de real. PROVISÓRIO: 1 KN = R$ 1,00,
-// aguardando confirmação dos donos.
-export const CENTAVOS_POR_KN = 100;
+// Decisão dos donos: toda venda é dividida 50/50 entre vendedor e Kennismarket.
+export const PORCENTAGEM_VENDEDOR = 50;
 
-// Taxa do Kennismarket, em porcentagem, por tipo de vendedor.
-export const TAXAS = {
-  inscricao: 15, // abriu a loja normalmente
-  convite: 50,   // entrou por link de convite (acordo 50/50)
-};
-
-export function knParaCentavos(kn) {
+// 1 KN Coin = 1 euro. O preço em reais usa a cotação do euro do dia.
+export function knParaCentavos(kn, cotacaoBrl) {
   if (!Number.isInteger(kn) || kn <= 0) throw new Error('Valor em KN inválido');
-  return kn * CENTAVOS_POR_KN;
+  const taxa = Number(cotacaoBrl);
+  if (!(taxa > 0) || !Number.isFinite(taxa)) throw new Error('Cotação inválida');
+  return Math.round(kn * taxa * 100);
 }
 
-// Divide um pagamento entre vendedor e Kennismarket.
-// O arredondamento sempre favorece o vendedor, e a soma bate exatamente com o total.
-export function dividirVenda(totalCentavos, origemVendedor) {
-  if (!Number.isInteger(totalCentavos) || totalCentavos <= 0) {
-    throw new Error('Total inválido');
-  }
-  const taxa = TAXAS[origemVendedor];
-  if (taxa === undefined) throw new Error(`Origem de vendedor desconhecida: ${origemVendedor}`);
-  const plataforma = Math.floor((totalCentavos * taxa) / 100);
-  return { vendedor: totalCentavos - plataforma, plataforma, taxa };
+// Divide o valor que sobrou depois da taxa do Asaas.
+// O centavo quebrado fica com o vendedor, e a soma bate exatamente com o total.
+export function dividirVenda(baseCentavos) {
+  if (!Number.isInteger(baseCentavos) || baseCentavos <= 0) throw new Error('Valor inválido');
+  const plataforma = Math.floor((baseCentavos * (100 - PORCENTAGEM_VENDEDOR)) / 100);
+  return { vendedor: baseCentavos - plataforma, plataforma };
 }
+
+// O Asaas trabalha com reais em número decimal (ex.: 99.01).
+export const centavosParaReais = (c) => Math.round(c) / 100;
+export const reaisParaCentavos = (r) => Math.round(Number(r) * 100);
 
 export function formatarReais(centavos) {
   return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

@@ -45,5 +45,7 @@ export const config = {
     apiKey: limpo(env.ASAAS_API_KEY),
     webhookToken: limpo(env.ASAAS_WEBHOOK_TOKEN),
   },
+  // Senha que a tarefa agendada do GitHub manda para disparar cotações e repasses.
+  tarefasToken: limpo(env.TAREFAS_TOKEN),
   suporteEmail: 'kennismarket.support@protonmail.com',
 };

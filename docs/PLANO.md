@@ -4,27 +4,31 @@
 
 - **Navegador** (`public/`): as telas. Abre em holandês, com seletor de idioma no topo.
 - **Servidor** (`server/`): toda operação com dinheiro passa por aqui. O navegador nunca decide valores.
-- **Supabase**: login, banco de dados e arquivos (e-books, entregas).
-- **Asaas (sandbox)**: cobrança em R$ via Pix, boleto e cartão, com split automático para o vendedor.
+- **Supabase**: login, banco de dados e arquivos. Nada fica guardado em arquivo no servidor.
+- **Asaas (sandbox)**: cobrança em R$ via Pix, boleto e cartão, e Pix para o vendedor.
+- **GitHub Actions**: dispara as tarefas agendadas (cotação diária, nova tentativa de repasses).
 
 ## Fluxo de uma venda
 
-1. O cliente escolhe um produto na loja e clica em comprar.
-2. O servidor cria o pedido e uma cobrança no Asaas no valor exato (KN → R$), já com o split
-   (15% ou 50/50, conforme a origem do vendedor).
-3. O Asaas avisa o servidor que o pagamento caiu, e só aí o pedido vira "pago" e o vendedor pode atender.
-4. O vendedor entrega pelo chat ou com arquivo, e o pedido vira "entregue".
-5. Se o cliente pedir reembolso, o pedido fica "em análise". O suporte decide e devolve em dinheiro pelo Asaas.
+1. O cliente escolhe um produto (preço em KN, 1 KN = 1 euro) e clica em comprar.
+2. O servidor converte para reais com a cotação do dia, cria o pedido e a cobrança no Asaas.
+3. O Asaas avisa que o pagamento foi aprovado: o pedido vira "pago" e o vendedor pode atender.
+4. Assim que o dinheiro cai na conta do Kennismarket, metade do valor líquido vai por Pix para o vendedor.
+   (Pix e boleto: na hora. Cartão: quando o Asaas libera, uns 30 dias depois.)
+5. O vendedor entrega e o cliente confirma.
+6. Se o cliente pedir reembolso, o suporte analisa e, se aprovar, devolve em dinheiro pelo Asaas
+   (sai do caixa do Kennismarket, porque o vendedor já recebeu).
 
 ## Etapas
 
 | # | Etapa | Status |
 |---|---|---|
-| 0 | Estrutura do projeto, servidor, marca, idiomas, regras de split com testes | feito |
+| 0 | Estrutura do projeto, servidor, marca, idiomas | feito |
+| 0b | Um servidor só: pagamentos da km-api trazidos para cá, dados no Supabase, tarefas pelo GitHub, Render | feito |
 | 1 | Cadastro e login (Supabase), perfis de cliente e vendedor | próximo |
-| 2 | Lojas e cadastro de produtos/serviços, upload de arquivos | |
-| 3 | Checkout com Asaas sandbox, split e aviso de pagamento (webhook) | |
-| 4 | Pedidos, entrega e solicitação de reembolso + painel do suporte | |
+| 2 | Lojas e produtos (com lojas e avaliações de mentira na versão de testes), upload de arquivos | |
+| 3 | Tela de checkout no site (o servidor de pagamento já está pronto) | |
+| 4 | Telas de pedidos, entrega e reembolso + painel do suporte | |
 | 5 | Chat cliente ↔ vendedor | |
 | 6 | Painel do vendedor com o valor a receber | |
 | 7 | Links de convite (só donos) | |
@@ -37,18 +41,19 @@
 | Carteira com saldo de KN Coins e compra de qualquer valor | Sem saldo avulso: compra exata do pedido |
 | Reembolso volta como KN Coins para a carteira | Reembolso sempre em dinheiro |
 | "Reserva" antes do pagamento, vendedor manda proposta depois | Cliente paga primeiro, depois é atendido |
-| Preços em euro, várias moedas (iDEAL, PayPal...) | Só reais (R$) via Asaas: Pix, boleto, cartão |
-| Divisão ajustável de 10% a 90% | 15% (inscrição) ou 50/50 (convite) |
-| Lojas, clientes e avaliações gerados automaticamente | Só lojas e avaliações reais |
+| Dinheiro fica retido até o cliente aprovar | Vendedor recebe assim que o dinheiro cai |
+| Divisão ajustável de 10% a 90% | 50/50 em todas as vendas |
 | Hexágonos no fundo dos banners | Sem hexágono (regra da marca) |
 | Abre no modo escuro | Segue o modo do aparelho (claro ou escuro) |
 
+Lojas, clientes e avaliações inventadas: **podem ficar na versão de testes**, como no protótipo. Na versão real, só dados reais.
+
 Mantemos do protótipo: o layout em grade, as cores, a loja com chat ao lado (abas no celular),
-o aviso quando alguém tenta levar a conversa para fora (WhatsApp, Pix direto, telefone)
-e o chat em tela cheia no celular.
+o aviso quando alguém tenta levar a conversa para fora (WhatsApp, Pix direto, telefone),
+o chat em tela cheia no celular e a tabela de conversão de moedas.
 
-## Perguntas em aberto para os donos
+## Riscos aceitos pelos donos
 
-1. Quanto vale 1 KN Coin em reais? Por enquanto o código usa 1 KN = R$ 1,00.
-2. Quando o vendedor recebe: na hora do pagamento (split imediato) ou só depois que o cliente
-   confirma a entrega? Com split imediato, um reembolso aprovado sai do caixa do Kennismarket.
+- **Vendedor recebe antes da confirmação do cliente.** Num golpe, o dinheiro do vendedor já saiu: o reembolso ao cliente sai do caixa do Kennismarket, e o vendedor é banido.
+- **Conta Asaas no CPF.** O Pix mostra o nome do dono da conta para quem paga, e não há como esconder sem CNPJ.
+- **Cotação congelada na compra.** O cliente paga em reais pela cotação do dia; se o euro mudar depois, não muda nada no pedido.

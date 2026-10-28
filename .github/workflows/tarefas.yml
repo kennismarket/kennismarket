@@ -1,0 +1,53 @@
+# Tarefas agendadas do Kennismarket.
+# Servidores grátis (como o Render) dormem quando ninguém visita, então não conseguem
+# "lembrar" de fazer nada sozinhos. O GitHub chama o site nos horários abaixo, o que
+# também acorda o servidor se ele estiver dormindo.
+#
+# Configuração (GitHub → Settings → Secrets and variables → Actions):
+#   Variável  SITE_URL       → endereço do site, ex.: https://kennismarket.onrender.com
+#   Segredo   TAREFAS_TOKEN  → o mesmo valor de TAREFAS_TOKEN cadastrado no Render
+#
+# Os horários são em UTC (Brasília = UTC−3). O GitHub pode atrasar alguns minutos.
+name: Tarefas agendadas
+
+on:
+  schedule:
+    - cron: '30 16 * * *' # cotações: todo dia, depois que o Banco Central Europeu publica
+    - cron: '7 * * * *'   # repasses: de hora em hora, tenta de novo os que falharam
+  workflow_dispatch:      # botão "Run workflow" para rodar na mão
+    inputs:
+      tarefa:
+        description: Qual tarefa rodar
+        type: choice
+        options: [cotacoes, repasses]
+        default: cotacoes
+
+permissions: {}
+
+jobs:
+  chamar-site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Chamar o site
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          TAREFAS_TOKEN: ${{ secrets.TAREFAS_TOKEN }}
+          AGENDA: ${{ github.event.schedule }}
+          ESCOLHIDA: ${{ inputs.tarefa }}
+        run: |
+          if [ -z "$SITE_URL" ] || [ -z "$TAREFAS_TOKEN" ]; then
+            echo "::warning::SITE_URL ou TAREFAS_TOKEN não configurados no GitHub. Nada foi feito."
+            exit 0
+          fi
+          if [ -n "$ESCOLHIDA" ]; then TAREFA="$ESCOLHIDA"
+          elif [ "$AGENDA" = "30 16 * * *" ]; then TAREFA=cotacoes
+          else TAREFA=repasses; fi
+          echo "Tarefa: $TAREFA"
+          # O servidor pode levar ~1 minuto para acordar: tenta algumas vezes.
+          # O repositório é público, então a resposta não é mostrada no log (só o código HTTP).
+          RESPOSTA=$(mktemp)
+          CODIGO=$(curl -sS -o "$RESPOSTA" -w '%{http_code}' --retry 4 --retry-delay 20 --retry-all-errors \
+            --max-time 120 -X POST -H "x-tarefas-token: $TAREFAS_TOKEN" "${SITE_URL%/}/api/tarefas/$TAREFA")
+          echo "Resposta do site: HTTP $CODIGO"
+          [ "$CODIGO" = "200" ]
