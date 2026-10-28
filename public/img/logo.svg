@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Kennismarket">
+  <rect width="64" height="64" rx="12" fill="#102A43"/>
+  <path d="M19 14h8v36h-8z" fill="#FFFFFF"/>
+  <path d="M27 33 40 14h9L33 37z" fill="#FFFFFF"/>
+  <path d="M31 35l5-5 14 20h-9.5z" fill="#16805D"/>
+</svg>

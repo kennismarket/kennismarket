@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kennismarket</title>
+  <link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Instrument+Sans:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="logo" href="/"><img src="/img/logo.svg" alt="">Kennismarket</a>
+      <div class="grow"></div>
+      <label for="idioma" hidden data-t="idioma"></label>
+      <select id="idioma" class="langsel">
+        <option value="nl">NL · Nederlands</option>
+        <option value="en">EN · English</option>
+        <option value="es">ES · Español</option>
+        <option value="pt">PT · Português</option>
+      </select>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1 data-t="heroTitulo"></h1>
+      <p data-t="heroTexto"></p>
+      <p class="aviso" data-t="emConstrucao"></p>
+    </section>
+    <section class="grid">
+      <div class="card"><b data-t="cat1"></b><span data-t="cat1d"></span></div>
+      <div class="card"><b data-t="cat2"></b><span data-t="cat2d"></span></div>
+      <div class="card"><b data-t="cat3"></b><span data-t="cat3d"></span></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap"><span data-t="suporte"></span> <a href="mailto:kennismarket.support@protonmail.com">kennismarket.support@protonmail.com</a></div>
+  </footer>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

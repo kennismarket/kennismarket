@@ -1,0 +1,20 @@
+{
+  "name": "kennismarket",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Marketplace de mentorias, consultorias, serviços e e-books.",
+  "type": "module",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "express": "^4.22.3"
+  }
+}
