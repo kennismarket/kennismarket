@@ -3,12 +3,12 @@ import { config } from '../config.js';
 
 export const configPublica = Router();
 
-// Só o que o navegador pode ver. A chave "anon" do Supabase é pública por natureza;
-// a segurança vem das regras de acesso (RLS) no banco.
+// Só o que o navegador pode ver. A chave "publishable" do Supabase é pública por natureza;
+// a segurança vem das regras de acesso (RLS) no banco. A chave secreta NUNCA sai daqui.
 configPublica.get('/', (_req, res) => {
   res.json({
     supabaseUrl: config.supabase.url,
-    supabaseAnonKey: config.supabase.anonKey,
+    supabasePublishableKey: config.supabase.publishableKey,
     suporteEmail: config.suporteEmail,
   });
 });

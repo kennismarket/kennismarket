@@ -1,14 +1,22 @@
 import { Router } from 'express';
-import { config } from '../config.js';
+import { config, avisos } from '../config.js';
+import { testarSupabase } from '../lib/supabase.js';
 
 export const saude = Router();
 
-// Página de checagem: mostra se o servidor está de pé e o que já está configurado.
-saude.get('/', (_req, res) => {
+// Página de checagem: mostra o que está configurado e testa a conexão com o Supabase.
+// Nunca mostra as chaves, só se estão preenchidas.
+saude.get('/', async (_req, res) => {
+  const { url, publishableKey, secretKey } = config.supabase;
   res.json({
     ok: true,
-    supabaseConfigurado: Boolean(config.supabase.url && config.supabase.serviceRoleKey),
-    asaasConfigurado: Boolean(config.asaas.apiKey),
-    asaasAmbiente: config.asaas.ambiente,
+    supabase: {
+      url: url || 'NÃO PREENCHIDA',
+      chavePublica: publishableKey ? 'preenchida' : 'NÃO PREENCHIDA',
+      chaveSecreta: secretKey ? 'preenchida' : 'NÃO PREENCHIDA',
+      conexao: await testarSupabase(),
+    },
+    asaas: { configurado: Boolean(config.asaas.apiKey), ambiente: config.asaas.ambiente },
+    avisos,
   });
 });

@@ -1,6 +1,6 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
-import { config } from './config.js';
+import { config, avisos } from './config.js';
 import { saude } from './routes/saude.js';
 import { configPublica } from './routes/config-publica.js';
 
@@ -20,5 +20,6 @@ app.use(express.static(pastaPublica));
 app.get('*', (_req, res) => res.sendFile('index.html', { root: pastaPublica }));
 
 app.listen(config.porta, () => {
+  avisos.forEach((a) => console.warn('ATENÇÃO:', a));
   console.log(`Kennismarket rodando em http://localhost:${config.porta} (Asaas: ${config.asaas.ambiente})`);
 });
