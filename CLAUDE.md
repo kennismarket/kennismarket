@@ -53,6 +53,13 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 - Ao aprovar um reembolso, o site **anota o débito do vendedor** (a parte dele, proporcional ao valor devolvido). É **só um registro**: a cobrança é feita por fora pelos donos.
 - Depois de receber o pedido, só tem reembolso se o que chegou não condiz com o pedido ou com o que a loja mostrava (conta/portfólio).
 
+## Referência visual (regra)
+- O `kennismarket-prototipo.html` é a **referência visual oficial**. O site real tem que ficar **igual** a ele: mesmas telas, layout, cores, fontes, textos, ícones, espaçamentos, animações e versão de celular.
+- **Reaproveitar o CSS e o HTML do protótipo** sempre que der, em vez de reescrever do zero.
+- **Não mudar nem "melhorar" nada visual sem perguntar antes aos donos.** Isso inclui coisas que parecem pequenas (modo claro/escuro, um texto, um ícone).
+- Se algo do protótipo não puder ficar igual (por exemplo, porque contradiz uma regra de negócio deste arquivo, ou porque é só simulação), **avisar e explicar por quê**, e esperar a decisão.
+- Quando os donos atualizarem o protótipo, comparar com o site e listar o que ficou diferente.
+
 ## Marca
 - Logo: **K branco com a perna inferior verde, sobre fundo azul-escuro**. O **logo** não leva hexágono; no resto do site, hexágonos são permitidos (ex.: fundo dos banners, como no protótipo).
 - Paleta: principal `#102A43`, base `#FFFFFF`, destaque financeiro `#16805D`, estrutura `#F3F6F9`, texto secundário `#526579`.
@@ -70,7 +77,7 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
   - nunca editar um arquivo de migração que já entrou na `main`; toda mudança vai num arquivo novo, com número maior (`0002_...sql`, `0003_...sql`);
   - os donos **não** rodam migrações na mão. O item 3 do fim da resposta só traz SQL avulso (consultas ou correções que não são migração), e diz isso;
   - antes de juntar, testar a migração num Postgres descartável (`npm run test:banco`).
-- Ponto de partida visual: `kennismarket-prototipo.html` (protótipo de uma página só, com dados simulados). Use como referência de layout e comportamento.
+- Referência visual oficial: `kennismarket-prototipo.html` (protótipo de uma página só, com dados simulados). Ver "Referência visual (regra)".
 - **Versão de testes**: pode ter lojas, clientes e avaliações inventadas como no protótipo (ninguém de verdade usa). Na versão real, só dados reais.
 
 ## Prioridades da primeira versão
