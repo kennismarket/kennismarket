@@ -22,6 +22,7 @@ Endereços marcados com 🔒 exigem login: o navegador manda o token do Supabase
 | `GET /api/cotacoes` | Última cotação de cada moeda: `{ base: "EUR", data, taxas: { EUR: 1, BRL: 6.12, USD: 1.12, ... } }` |
 | `GET /api/cotacoes/2026-10-27` | A cotação válida naquele dia |
 | `GET /api/cotacoes/historico/BRL?dias=30` | Histórico de uma moeda |
+| `GET /api/rates` | As mesmas cotações no formato que o protótipo lê: `{ base: "EUR", date, rates: { BRL: 6.12, ... } }`. Aberto para outros sites (é só leitura). No protótipo: `RATES_URL="https://SEU-ENDERECO/api/rates"`. |
 
 Fontes: [Frankfurter](https://frankfurter.dev) (dados oficiais do Banco Central Europeu) e, como reserva e para ARS/UYU,
 [ExchangeRate-API](https://www.exchangerate-api.com). Os termos da ExchangeRate-API pedem um link de crédito no site:

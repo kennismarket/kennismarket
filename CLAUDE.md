@@ -61,7 +61,7 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 - Quando os donos atualizarem o protótipo, comparar com o site e listar o que ficou diferente.
 
 ## Marca
-- Logo: **K branco com a perna inferior verde, sobre fundo azul-escuro**. O **logo** não leva hexágono; no resto do site, hexágonos são permitidos (ex.: fundo dos banners, como no protótipo).
+- Logo: **o do protótipo** (decisão dos donos): o texto **"Kennismarket."** com o ponto verde e o **K dentro do hexágono** prateado (login e página inicial do protótipo). Hexágonos são permitidos no site todo.
 - Paleta: principal `#102A43`, base `#FFFFFF`, destaque financeiro `#16805D`, estrutura `#F3F6F9`, texto secundário `#526579`.
 - Estética: design holandês, sóbrio e em grade. Tem que funcionar perfeito no celular e no computador.
 - E-mail de suporte: kennismarket.support@protonmail.com

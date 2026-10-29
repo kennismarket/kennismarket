@@ -27,3 +27,16 @@ export function rotasCotacoes({ repo }) {
 
   return r;
 }
+
+// Mesmas cotações, no formato que o protótipo lê (RATES_URL): { base, date, rates }.
+// Público e só leitura, então pode ser lido de qualquer site (CORS aberto).
+export function rotaRatesPrototipo({ repo }) {
+  const r = Router();
+  r.get('/', rota(async (_req, res) => {
+    res.set({ 'Cache-Control': 'public, max-age=900', 'Access-Control-Allow-Origin': '*' });
+    const t = montarTabela(await repo.ultimasCotacoes());
+    if (!t.data) throw erro(503, 'ainda sem cotações salvas');
+    res.json({ base: t.base, date: t.data, rates: t.taxas });
+  }));
+  return r;
+}
