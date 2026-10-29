@@ -7,8 +7,9 @@ Leia este arquivo antes de qualquer tarefa. Ele resume as decisões já tomadas 
 - Explique tudo em português simples, sem jargão. Antes de mudanças grandes, diga o plano em poucas linhas.
 - Depois de cada mudança, diga o que mudou e como testar no navegador.
 - Respostas diretas e sem enrolação. Se uma ideia for ruim ou arriscada, diga direto, uma vez.
+- **Merge autorizado:** os donos autorizaram juntar na `main` sem pedir, sempre. Fluxo: branch → testes passando → pull request → merge.
 - **No fim de toda mudança**, termine a resposta com estes 3 itens, sempre, mesmo quando a resposta for "não":
-  1. **Merge no GitHub:** se precisa juntar alguma branch na `main` (com o link do pull request).
+  1. **Merge no GitHub:** o que foi juntado na `main` (com o link do pull request), ou o que ficou pendente e por quê.
   2. **Variável nova no Render:** nome de cada variável e onde pegar o valor.
   3. **SQL no Supabase:** o SQL pronto para copiar e colar no SQL Editor, num bloco de código, e se ele pode ser rodado mais de uma vez.
 
