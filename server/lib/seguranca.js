@@ -41,6 +41,8 @@ export const rota = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 // Responde erros sempre no mesmo formato: { erro: "..." }.
 // Erros do módulo de pagamento já trazem o status certo (400, 501, 502).
 export function tratarErros(e, _req, res, _next) {
+  // Arquivo maior que o permitido: o protótipo entende o código "too_large".
+  if (e.type === 'entity.too.large') return res.status(413).json({ erro: 'arquivo grande demais', codigo: 'too_large' });
   const status = e.status || 500;
   if (status === 500 || status === 502) console.error(e); // só erros inesperados vão para o log
   res.status(status).json({ erro: status === 500 ? 'erro interno' : e.message });

@@ -5,6 +5,22 @@ Respostas sempre em JSON. Erros vêm como `{ "erro": "mensagem" }`.
 Endereços marcados com 🔒 exigem login: o navegador manda o token do Supabase no cabeçalho
 `Authorization: Bearer <token>`. Os de 👑 são só para os donos (perfil com papel `dono`).
 
+## O site (versão de testes)
+
+A página do site é o próprio protótipo. Os recursos do claude.ai que ele usava ficam no servidor:
+
+| Endereço | O que faz |
+|---|---|
+| `GET /api/prototipo/colecoes/:colecao?versao=N` | Documentos de `stores`, `delivfiles` ou `sellers`. Com a versão atual, responde só `inalterado`. |
+| `PUT /api/prototipo/docs/:colecao/:id` | Grava um documento: `{ "dados": { ... } }` (até 256 KB). |
+| `DELETE /api/prototipo/docs/:colecao/:id` | Apaga um documento. |
+| `POST /api/prototipo/arquivos` | Envia um arquivo (o corpo é o arquivo; o tipo vai no `Content-Type`). PDF, imagens, MP4/WebM, TXT, CSV, MD ou JSON, até 20 MB. |
+| `DELETE /api/prototipo/arquivos/:id` | Apaga um arquivo. |
+| `GET /_blob/:id` | Abre um arquivo enviado (protegido para nunca rodar código). |
+| `GET /api/prototipo/ia` / `POST /api/prototipo/ia` | IA do chat de suporte (só com `ANTHROPIC_API_KEY`). |
+
+Esses endereços são abertos, como no protótipo: qualquer visitante pode gravar. Há limite de ações por visitante.
+
 ## Situação do site
 
 | Endereço | O que faz |

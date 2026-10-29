@@ -5,7 +5,7 @@ const bate = (linha, condicoes = {}) => Object.entries(condicoes).every(([campo,
   [].concat(valores).some((v) => (v === null ? linha[campo] == null : linha[campo] === v)));
 
 export function criarRepoMemoria() {
-  const t = { usuarios: {}, lojas: {}, dadosRecebimento: {}, produtos: {}, pedidos: {}, reembolsos: {}, debitos: {}, cotacoes: [], eventos: new Set() };
+  const t = { usuarios: {}, lojas: {}, dadosRecebimento: {}, produtos: {}, pedidos: {}, reembolsos: {}, debitos: {}, cotacoes: [], eventos: new Set(), docs: {}, arquivos: {} };
   const copia = (x) => (x ? structuredClone(x) : null);
   const ultimasPorMoeda = (ate) => {
     const m = {};
@@ -81,6 +81,15 @@ export function criarRepoMemoria() {
     async listarDebitos({ situacao, pedidoId } = {}) {
       return Object.values(t.debitos).filter((d) => (!situacao || d.situacao === situacao) && (!pedidoId || d.pedido_id === pedidoId)).map(copia);
     },
+    async listarDocsPrototipo(colecao) {
+      return Object.entries(t.docs[colecao] || {}).map(([id, dados]) => ({ id, dados: structuredClone(dados) }));
+    },
+    async salvarDocPrototipo(colecao, id, dados) { (t.docs[colecao] ||= {})[id] = structuredClone(dados); },
+    async apagarDocPrototipo(colecao, id) { if (t.docs[colecao]) delete t.docs[colecao][id]; },
+    async espacoUsadoPrototipo() { return Object.values(t.arquivos).reduce((s, a) => s + a.conteudo.length, 0); },
+    async salvarArquivoPrototipo(id, tipo, conteudo) { t.arquivos[id] = { tipo, conteudo: Buffer.from(conteudo) }; },
+    async lerArquivoPrototipo(id) { return t.arquivos[id] ? { ...t.arquivos[id] } : null; },
+    async apagarArquivoPrototipo(id) { delete t.arquivos[id]; },
     async prepararDadosTeste() {
       const contas = { cliente: 'Cliente de Teste', vendedor: 'Vendedora de Teste', dono: 'Dono de Teste' };
       const tokens = {};

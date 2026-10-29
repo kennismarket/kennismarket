@@ -20,7 +20,7 @@ npm install
 npm run dev
 ```
 
-4. Abra http://localhost:3000 no navegador.
+4. Abra http://localhost:3000 no navegador: o site é o próprio protótipo.
    Para conferir as configurações, abra http://localhost:3000/api/saude.
    Para testar o fluxo de pagamento (com o provedor simulado), abra http://localhost:3000/teste/pagamentos.
 
@@ -46,11 +46,13 @@ BANCO_TESTE=postgres://usuario@localhost:5432/km_teste npm run test:banco
 | `server/lib/dinheiro.js` | Regras de dinheiro: divisão 50/50, conversão KN (euro) → R$ e débito do vendedor no reembolso. |
 | `server/pagamentos/` | **Módulo de pagamento**: a única parte que fala com o banco. Provedores `simulado` e `transfeera` (esqueleto). |
 | `server/teste/` | Página de teste do fluxo de pagamento (só com o provedor simulado). |
+| `server/routes/prototipo.js` + `public/js/ponte-claude.js` | Os recursos do claude.ai que o protótipo usava (dados compartilhados, arquivos, IA), agora no Supabase. |
+| `scripts/importar-prototipo.mjs` | Leva para o site os dados do protótipo publicado no claude.ai. |
 | `server/lib/cotacoes.js` | Cotação diária do euro (Banco Central Europeu, com fonte reserva). |
 | `server/routes/` | Os endereços do servidor (pedidos, loja, reembolsos, aviso de pagamento, tarefas). |
-| `public/` | O que aparece no navegador: páginas, estilos, logo e textos nos 4 idiomas. |
+| `public/` | Arquivos que o navegador baixa (a ponte do protótipo e os estilos da página de teste). |
 | `supabase/migrations/` | Estrutura do banco de dados (tabelas e regras de acesso). |
 | `.github/workflows/` | Tarefa agendada: cotação diária do euro. |
 | `render.yaml` | Configuração do Render (versão de testes). |
 | `tests/` | Testes automáticos. |
-| `kennismarket-prototipo.html` | Protótipo original, só como referência visual. |
+| `kennismarket-prototipo.html` | O protótipo: referência visual oficial **e** a página do site (versão de testes). |
