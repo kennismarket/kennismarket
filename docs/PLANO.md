@@ -43,14 +43,14 @@
 | "Reserva" antes do pagamento, vendedor manda proposta depois | Cliente paga primeiro, depois é atendido |
 | Dinheiro fica retido até o cliente aprovar | Vendedor recebe assim que o dinheiro cai |
 | Divisão ajustável de 10% a 90% | 50/50 em todas as vendas |
-| Hexágonos no fundo dos banners | Sem hexágono (regra da marca) |
 | Abre no modo escuro | Segue o modo do aparelho (claro ou escuro) |
 
 Lojas, clientes e avaliações inventadas: **podem ficar na versão de testes**, como no protótipo. Na versão real, só dados reais.
 
 Mantemos do protótipo: o layout em grade, as cores, a loja com chat ao lado (abas no celular),
 o aviso quando alguém tenta levar a conversa para fora (WhatsApp, Pix direto, telefone),
-o chat em tela cheia no celular e a tabela de conversão de moedas.
+o chat em tela cheia no celular, a tabela de conversão de moedas e os hexágonos no fundo dos banners
+(a regra "sem hexágono" vale só para o logo).
 
 ## Riscos aceitos pelos donos
 
