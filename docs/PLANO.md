@@ -36,23 +36,24 @@
 | 7 | Links de convite (só donos) | |
 | — | Revisão de segurança por um dev antes de ligar dinheiro real | obrigatório |
 
-## O que do protótipo muda (o CLAUDE.md manda mais)
+## Protótipo × regras de negócio
 
-| No protótipo | Na versão real |
+O protótipo (`kennismarket-prototipo.html`) é a referência visual oficial: o site fica igual a ele,
+e nada visual muda sem os donos aprovarem.
+
+Algumas telas e textos do protótipo descrevem regras de negócio antigas, que o CLAUDE.md mudou.
+**Como cada uma aparece no site ainda depende de decisão dos donos:**
+
+| No protótipo | Regra atual (CLAUDE.md) |
 |---|---|
-| Carteira com saldo de KN Coins e compra de qualquer valor | Sem saldo avulso: compra exata do pedido |
-| Reembolso volta como KN Coins para a carteira | Reembolso sempre em dinheiro |
-| "Reserva" antes do pagamento, vendedor manda proposta depois | Cliente paga primeiro, depois é atendido |
-| Dinheiro fica retido até o cliente aprovar | Vendedor recebe assim que o dinheiro cai |
-| Divisão ajustável de 10% a 90% | 50/50 em todas as vendas |
-| Abre no modo escuro | Segue o modo do aparelho (claro ou escuro) |
+| Carteira ("Portemonnee") com saldo de KN Coins e compra de qualquer valor | Sem saldo avulso: compra exata do pedido |
+| "Ongebruikte KN Coins krijg je terug" / reembolso volta como KN Coins | Reembolso sempre em dinheiro |
+| "Reserveer KN Coins", vendedor manda proposta depois | Cliente paga primeiro, depois é atendido |
+| "Je KN Coins blijven in de garantie tot de verkoper levert" (dinheiro retido) | Split instantâneo, sem retenção |
+| Divisão ajustável de 10% a 90% no painel do dono | 50/50 em todas as vendas |
+| Pagamento por iDEAL, PayPal, cartão e outras moedas, pelo processador antigo | Pix e boleto em R$ pela Transfeera (cartão desligado) |
 
 Lojas, clientes e avaliações inventadas: **podem ficar na versão de testes**, como no protótipo. Na versão real, só dados reais.
-
-Mantemos do protótipo: o layout em grade, as cores, a loja com chat ao lado (abas no celular),
-o aviso quando alguém tenta levar a conversa para fora (WhatsApp, Pix direto, telefone),
-o chat em tela cheia no celular, a tabela de conversão de moedas e os hexágonos no fundo dos banners
-(a regra "sem hexágono" vale só para o logo).
 
 ## Riscos aceitos pelos donos
 
