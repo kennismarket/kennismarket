@@ -10,7 +10,7 @@ Endereços marcados com 🔒 exigem login: o navegador manda o token do Supabase
 | Endereço | O que faz |
 |---|---|
 | `GET /api/vivo` | Responde `{ok:true}`. O Render usa para saber se o site está de pé. |
-| `GET /api/saude` | Mostra o que está configurado (Supabase e banco de pagamento) e testa a conexão com o Supabase. Nunca mostra chaves. |
+| `GET /api/saude` | Mostra qual versão do código está no ar (branch e commit, no Render), o que está configurado (Supabase e banco de pagamento) e testa a conexão com o Supabase. Nunca mostra chaves. |
 | `GET /api/config` | O que o navegador pode saber: endereço do Supabase e chave pública. |
 
 ## Cotações (públicas)

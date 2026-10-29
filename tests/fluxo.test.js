@@ -247,7 +247,10 @@ test('com a Transfeera: página de teste some, contas de teste param, e o que fa
     assert.equal((await api('POST', '/api/teste/preparar', null, null, { url })).s, 404);
     assert.equal((await api('GET', '/api/admin/debitos', null, tokTeste, { url })).s, 403);
 
+    process.env.RENDER_GIT_BRANCH = 'main';
+    process.env.RENDER_GIT_COMMIT = '8698245abcdef';
     const saude = await api('GET', '/api/saude', null, null, { url });
+    assert.deepEqual(saude.j.versao, { branch: 'main', commit: '8698245' });
     assert.deepEqual(saude.j.pagamentos, { provedor: 'transfeera', formas: ['pix', 'boleto'], ambiente: 'sandbox', credenciais: 'NÃO PREENCHIDAS', implementado: false });
 
     // cadastro do vendedor depende da documentação
