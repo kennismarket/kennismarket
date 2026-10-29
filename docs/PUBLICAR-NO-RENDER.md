@@ -2,14 +2,16 @@
 
 Tudo aqui usa o **sandbox do Asaas** (dinheiro de mentira). Faça na ordem.
 
-## 1. Supabase: criar as tabelas
+## 1. Supabase: as tabelas são criadas sozinhas
 
-1. Entre no seu projeto em supabase.com.
-2. Menu da esquerda → **SQL Editor** → **New query**.
-3. Abra o arquivo `supabase/migrations/0001_inicial.sql` aqui do GitHub, copie tudo e cole.
-4. Clique em **Run**. Deve aparecer "Success".
+O Supabase está ligado ao GitHub com a opção **Deploy to production**. Toda vez que algo entra na `main`,
+ele aplica sozinho os arquivos novos da pasta `supabase/migrations`.
 
-Só rode esse arquivo **uma vez**. Se rodar de novo, ele dá erro dizendo que as tabelas já existem (não estraga nada).
+**Não rode esses arquivos na mão no SQL Editor.** Se rodar, o Supabase não fica sabendo que já foram
+aplicados, tenta de novo, dá erro e trava as próximas mudanças do banco.
+
+Para conferir se as tabelas existem: Supabase → **Table Editor**. Devem aparecer `pedidos`, `cotacoes`, `lojas` e as outras.
+Se algo der errado na aplicação automática, aparece um **X vermelho** "Supabase Preview" no commit, na página do GitHub.
 
 ## 2. Asaas sandbox: pegar a chave
 
