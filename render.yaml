@@ -32,3 +32,5 @@ services:
         sync: false
       - key: TAREFAS_TOKEN
         generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false

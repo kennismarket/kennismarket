@@ -12,19 +12,26 @@ import { rotasAdmin } from './routes/admin.js';
 import { rotaWebhookPagamento } from './routes/webhook-pagamento.js';
 import { rotasTarefas } from './routes/tarefas.js';
 import { rotasTeste } from './routes/teste.js';
+import { rotasPrototipo } from './routes/prototipo.js';
+import { montarPaginaPrototipo } from './lib/pagina-prototipo.js';
 
 const pastaPublica = fileURLToPath(new URL('../public', import.meta.url));
 
 // Monta o site. Os testes passam um banco de dados em memória.
-export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos() } = {}) {
+export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), paginaPrototipo = montarPaginaPrototipo() } = {}) {
   const app = express();
   const deps = { repo, pagamentos };
   const teste = rotasTeste(deps);
+  const prototipo = rotasPrototipo(deps);
   app.disable('x-powered-by');
+  app.set('trust proxy', 1); // o Render fica na frente: o IP do visitante vem no cabeçalho
   app.locals.pagamentos = pagamentos;
+  app.locals.prototipoFaltando = paginaPrototipo.faltando;
 
   // O aviso do banco precisa chegar exatamente como foi enviado, para conferir a assinatura.
   app.use('/api/webhooks/pagamento', express.raw({ type: () => true, limit: '1mb' }), rotaWebhookPagamento(deps));
+  // Arquivos do protótipo chegam como estão (até 20 MB), sem passar pelo leitor de JSON.
+  app.use('/api/prototipo/arquivos', express.raw({ type: () => true, limit: 20 * 1024 * 1024 + 1 }));
   app.use(express.json({ limit: '1mb' }));
 
   app.get('/api/vivo', (_req, res) => res.json({ ok: true })); // usado pelo Render para saber se está de pé
@@ -37,12 +44,16 @@ export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos() } =
   app.use('/api/admin', rotasAdmin(deps));
   app.use('/api/tarefas', rotasTarefas(deps));
   app.use('/api/teste', teste.api);
+  app.use('/api/prototipo', prototipo.api);
   app.use('/api', (_req, res) => res.status(404).json({ erro: 'rota não encontrada' }));
   app.use('/teste', teste.telas);
+  app.use('/_blob', prototipo.blob);
 
+  // A página do site é o protótipo (a navegação dele é feita no navegador, pelo # do endereço).
+  const enviarPagina = (_req, res) => res.set('Cache-Control', 'no-cache').type('html').send(paginaPrototipo.html);
+  app.get(['/', '/index.html'], enviarPagina);
   app.use(express.static(pastaPublica));
-  // Qualquer outro endereço abre o site (a navegação é feita no navegador).
-  app.get('*', (_req, res) => res.sendFile('index.html', { root: pastaPublica }));
+  app.get('*', enviarPagina);
   app.use(tratarErros);
   return app;
 }

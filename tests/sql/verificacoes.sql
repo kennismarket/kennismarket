@@ -151,5 +151,28 @@ do $$ begin
   assert (select count(*) from produtos) = 0, 'produtos de loja banida somem';
 end $$;
 
+-- protótipo: só coleções conhecidas, ids seguros, e nada visível para o navegador
+reset role;
+insert into prototipo_docs (colecao, id, dados) values ('stores', 's1001', '{"store":{"id":1001}}');
+do $$ begin
+  begin
+    insert into prototipo_docs (colecao, id, dados) values ('outra', 'x', '{}');
+    raise exception 'devia recusar coleção desconhecida';
+  exception when check_violation then null; end;
+  begin
+    insert into prototipo_docs (colecao, id, dados) values ('stores', '../x', '{}');
+    raise exception 'devia recusar id com barra';
+  exception when check_violation then null; end;
+  assert (select public from storage.buckets where id = 'prototipo') = false, 'pasta de arquivos privada';
+end $$;
+set local role anon;
+do $$ begin
+  begin
+    perform 1 from prototipo_docs;
+    raise exception 'navegador NÃO pode ler o protótipo direto';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+
 rollback;
 \echo 'BANCO: todas as verificações passaram'

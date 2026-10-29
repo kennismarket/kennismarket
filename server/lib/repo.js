@@ -6,6 +6,8 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from '../config.js';
 import { supabaseAdmin } from './supabase.js';
 
+const PASTA = 'prototipo'; // pasta do Storage com os arquivos do protótipo
+
 function db() {
   if (!supabaseAdmin) throw Object.assign(new Error('Supabase não configurado'), { status: 503 });
   return supabaseAdmin;
@@ -112,6 +114,38 @@ export const repo = {
     if (situacao) q = q.eq('situacao', situacao);
     if (pedidoId) q = q.eq('pedido_id', pedidoId);
     return checar(await q);
+  },
+
+  // ---------- protótipo (versão de testes): documentos e arquivos, como no claude.ai ----------
+  async listarDocsPrototipo(colecao) {
+    const linhas = checar(await db().from('prototipo_docs').select('id, dados').eq('colecao', colecao).limit(5000));
+    return linhas.map((l) => ({ id: l.id, dados: l.dados }));
+  },
+  async salvarDocPrototipo(colecao, id, dados) {
+    checar(await db().from('prototipo_docs').upsert({ colecao, id, dados, atualizado_em: new Date().toISOString() }, { onConflict: 'colecao,id' }));
+  },
+  async apagarDocPrototipo(colecao, id) {
+    checar(await db().from('prototipo_docs').delete().eq('colecao', colecao).eq('id', id));
+  },
+  async espacoUsadoPrototipo() {
+    const linhas = checar(await db().from('prototipo_arquivos').select('tamanho').limit(10000));
+    return linhas.reduce((t, l) => t + l.tamanho, 0);
+  },
+  async salvarArquivoPrototipo(id, tipo, conteudo) {
+    const { error } = await db().storage.from(PASTA).upload(id, conteudo, { contentType: tipo, upsert: true });
+    if (error) throw Object.assign(new Error(`Storage: ${error.message}`), { status: 502 });
+    checar(await db().from('prototipo_arquivos').upsert({ id, tipo, tamanho: conteudo.length }));
+  },
+  async lerArquivoPrototipo(id) {
+    const info = checar(await db().from('prototipo_arquivos').select('tipo').eq('id', id).maybeSingle());
+    if (!info) return null;
+    const { data, error } = await db().storage.from(PASTA).download(id);
+    if (error || !data) return null;
+    return { tipo: info.tipo, conteudo: Buffer.from(await data.arrayBuffer()) };
+  },
+  async apagarArquivoPrototipo(id) {
+    await db().storage.from(PASTA).remove([id]);
+    checar(await db().from('prototipo_arquivos').delete().eq('id', id));
   },
 
   // ---------- dados de teste (só para a página /teste/pagamentos, com o provedor simulado) ----------

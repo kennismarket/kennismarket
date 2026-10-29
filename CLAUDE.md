@@ -60,6 +60,13 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 - Se algo do protótipo não puder ficar igual (por exemplo, porque contradiz uma regra de negócio deste arquivo, ou porque é só simulação), **avisar e explicar por quê**, e esperar a decisão.
 - Quando os donos atualizarem o protótipo, comparar com o site e listar o que ficou diferente.
 
+## Versão de testes (demonstração) — como funciona
+- O site mostra o **próprio** `kennismarket-prototipo.html` como página (sem cópia nem reescrita). O servidor só faz 3 ajustes de ligação na hora de entregar a página (`server/lib/pagina-prototipo.js`): carrega a ponte, troca o endereço dos links de convite e aponta as cotações para `/api/rates`.
+- O protótipo foi feito para o claude.ai e usa `window.claude.use(...)`. A **ponte** `public/js/ponte-claude.js` oferece os mesmos recursos guardando tudo no Supabase pelo servidor (`server/routes/prototipo.js`): `db` (coleções `stores`, `delivfiles`, `sellers` → tabela `prototipo_docs`), `assets` (arquivos → Storage, pasta `prototipo`, abertos em `/_blob/<id>`), `downloads` e `sample` (IA do suporte, só com `ANTHROPIC_API_KEY`).
+- Os dados do protótipo publicado no claude.ai (lojas, PDFs, contas de vendedor, convites) são levados com `scripts/importar-prototipo.mjs`.
+- O que fica só no navegador de cada visitante continua igual ao protótipo (conta logada, pedidos, carteira, chats).
+- Este projeto do Supabase é o da **versão de testes**. Na versão final, os donos vão criar **outro projeto do Supabase** só com dados reais.
+
 ## Marca
 - Logo: **o do protótipo** (decisão dos donos): o texto **"Kennismarket."** com o ponto verde e o **K dentro do hexágono** prateado (login e página inicial do protótipo). Hexágonos são permitidos no site todo.
 - Paleta: principal `#102A43`, base `#FFFFFF`, destaque financeiro `#16805D`, estrutura `#F3F6F9`, texto secundário `#526579`.

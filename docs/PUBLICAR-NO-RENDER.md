@@ -27,6 +27,8 @@ Se algo der errado na aplicação automática, aparece um **X vermelho** "Supaba
 | `SUPABASE_SECRET_KEY` | Supabase → Project Settings → API Keys → Secret keys (`sb_secret_...`) |
 | `TRANSFEERA_CLIENT_ID`, `TRANSFEERA_CLIENT_SECRET`, `TRANSFEERA_WEBHOOK_SECRET` | **Deixe em branco por enquanto** (nomes provisórios, até chegar a documentação) |
 
+| `ANTHROPIC_API_KEY` | **Opcional.** Liga a IA do chat de suporte (tem custo por uso). Pegue em console.anthropic.com → API Keys. Vazia, o suporte responde "fora do ar, mande um e-mail". |
+
 `PAYMENT_PROVIDER` (`simulado`), `PAYMENT_CARD_ENABLED` (`false`) e `TRANSFEERA_AMBIENTE` (`sandbox`) já vêm preenchidos.
 `TAREFAS_TOKEN` o Render inventa sozinho. Você vai precisar copiá-lo no passo 3:
 no Render, abra o serviço → **Environment** → clique no olho ao lado dele.
