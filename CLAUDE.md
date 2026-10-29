@@ -55,6 +55,10 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 - Hospedagem: **versão de testes no Render** (plano grátis, `render.yaml`). Depois, **Hostinger** (Node.js gerenciada, com deploy pelo GitHub).
 - Tarefas agendadas (cotação diária, nova tentativa de repasses) rodam pelo **GitHub Actions** (`.github/workflows/tarefas.yml`), porque servidor grátis dorme.
 - Nada de dados guardados em arquivo no servidor: tudo no Supabase.
+- **Banco de dados:** o Supabase está ligado ao GitHub com **Deploy to production**: cada arquivo novo em `supabase/migrations/` é aplicado sozinho quando entra na `main`. Por isso:
+  - nunca editar um arquivo de migração que já entrou na `main`; toda mudança vai num arquivo novo, com número maior (`0002_...sql`, `0003_...sql`);
+  - os donos **não** rodam migrações na mão. O item 3 do fim da resposta só traz SQL avulso (consultas ou correções que não são migração), e diz isso;
+  - antes de juntar, testar a migração num Postgres descartável (`npm run test:banco`).
 - Ponto de partida visual: `kennismarket-prototipo.html` (protótipo de uma página só, com dados simulados). Use como referência de layout e comportamento.
 - **Versão de testes**: pode ter lojas, clientes e avaliações inventadas como no protótipo (ninguém de verdade usa). Na versão real, só dados reais.
 
