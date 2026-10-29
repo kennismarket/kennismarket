@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
-import { AsaasError } from './asaas.js';
+
+// Contas criadas pela página de teste. Só funcionam com o provedor simulado.
+export const DOMINIO_TESTE = '@teste.kennismarket.invalid';
 
 // Compara senhas sem vazar, pelo tempo de resposta, quantas letras estavam certas.
 export function iguais(a, b) {
@@ -13,11 +15,15 @@ export function erro(status, mensagem) {
 }
 
 // Exige login: o navegador manda "Authorization: Bearer <token do Supabase>".
-export const exigirUsuario = (repo) => async (req, _res, next) => {
+export const exigirUsuario = (repo, pagamentos) => async (req, _res, next) => {
   try {
     const token = (req.get('authorization') || '').replace(/^Bearer\s+/i, '');
     const usuario = token ? await repo.usuarioPorToken(token) : null;
     if (!usuario) return next(erro(401, 'faça login'));
+    // Contas de teste nunca funcionam com um banco de verdade.
+    if (usuario.email?.endsWith(DOMINIO_TESTE) && pagamentos?.provedor !== 'simulado') {
+      return next(erro(403, 'conta de teste só funciona com o provedor simulado'));
+    }
     req.usuario = usuario;
     next();
   } catch (e) {
@@ -33,8 +39,9 @@ export function exigirDono(req, _res, next) {
 export const rota = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 
 // Responde erros sempre no mesmo formato: { erro: "..." }.
+// Erros do módulo de pagamento já trazem o status certo (400, 501, 502).
 export function tratarErros(e, _req, res, _next) {
-  const status = e instanceof AsaasError ? (e.status < 500 ? 400 : 502) : e.status || 500;
+  const status = e.status || 500;
   if (status === 500 || status === 502) console.error(e); // só erros inesperados vão para o log
-  res.status(status).json({ erro: status >= 500 && !(e instanceof AsaasError) ? 'erro interno' : e.message });
+  res.status(status).json({ erro: status === 500 ? 'erro interno' : e.message });
 }

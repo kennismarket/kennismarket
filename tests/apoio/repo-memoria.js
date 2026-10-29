@@ -5,7 +5,7 @@ const bate = (linha, condicoes = {}) => Object.entries(condicoes).every(([campo,
   [].concat(valores).some((v) => (v === null ? linha[campo] == null : linha[campo] === v)));
 
 export function criarRepoMemoria() {
-  const t = { usuarios: {}, lojas: {}, dadosRepasse: {}, produtos: {}, pedidos: {}, reembolsos: {}, cotacoes: [], eventos: new Set() };
+  const t = { usuarios: {}, lojas: {}, dadosRecebimento: {}, produtos: {}, pedidos: {}, reembolsos: {}, debitos: {}, cotacoes: [], eventos: new Set() };
   const copia = (x) => (x ? structuredClone(x) : null);
   const ultimasPorMoeda = (ate) => {
     const m = {};
@@ -18,7 +18,9 @@ export function criarRepoMemoria() {
     async usuarioPorToken(token) { return copia(t.usuarios[token]); },
     async produto(id) { return copia(t.produtos[id]); },
     async loja(id) { return copia(t.lojas[id]); },
-    async dadosRepasse(lojaId) { return copia(t.dadosRepasse[lojaId]); },
+    async lojaDoVendedor(vendedorId) { return copia(Object.values(t.lojas).find((l) => l.vendedor_id === vendedorId)); },
+    async dadosRecebimento(lojaId) { return copia(t.dadosRecebimento[lojaId]); },
+    async salvarDadosRecebimento(linha) { t.dadosRecebimento[linha.loja_id] = { ...linha }; return copia(linha); },
 
     async salvarCotacoes(linhas) {
       for (const l of linhas) {
@@ -34,7 +36,7 @@ export function criarRepoMemoria() {
     },
 
     async criarPedido(campos) {
-      const p = { status: 'aguardando_pagamento', repasse_status: null, repasse_tentativas: 0, valor_liquido_centavos: null, ...campos };
+      const p = { status: 'aguardando_pagamento', repasse_status: 'aguardando', cobranca_id: null, ...campos };
       t.pedidos[p.id] = p;
       return copia(p);
     },
@@ -49,13 +51,9 @@ export function criarRepoMemoria() {
       }
       return mudou;
     },
-    async pedidosParaRepassar(max) {
-      return Object.values(t.pedidos).filter((p) => ['pendente', 'falhou'].includes(p.repasse_status) && p.repasse_tentativas < max)
-        .map((p) => ({ id: p.id }));
-    },
 
-    async eventoJaProcessado(id) { return t.eventos.has(id); },
-    async registrarEvento(id) { t.eventos.add(id); },
+    async eventoJaProcessado(provedor, id) { return t.eventos.has(`${provedor}|${id}`); },
+    async registrarEvento(provedor, id) { t.eventos.add(`${provedor}|${id}`); },
 
     async criarReembolso(campos) {
       if (Object.values(t.reembolsos).some((r) => r.pedido_id === campos.pedido_id && r.status === 'em_analise')) {
@@ -71,6 +69,29 @@ export function criarRepoMemoria() {
       if (!r || !bate(r, condicoes)) return [];
       Object.assign(r, campos);
       return [copia(r)];
+    },
+    async criarDebito(campos) {
+      if (Object.values(t.debitos).some((d) => d.reembolso_id === campos.reembolso_id)) {
+        throw Object.assign(new Error('Supabase: duplicate key'), { codigo: '23505' });
+      }
+      const d = { id: crypto.randomUUID(), situacao: 'aberto', ...campos };
+      t.debitos[d.id] = d;
+      return copia(d);
+    },
+    async listarDebitos({ situacao, pedidoId } = {}) {
+      return Object.values(t.debitos).filter((d) => (!situacao || d.situacao === situacao) && (!pedidoId || d.pedido_id === pedidoId)).map(copia);
+    },
+    async prepararDadosTeste() {
+      const contas = { cliente: 'Cliente de Teste', vendedor: 'Vendedora de Teste', dono: 'Dono de Teste' };
+      const tokens = {};
+      for (const [papel, nome] of Object.entries(contas)) {
+        const token = `tok-teste-${papel}-${crypto.randomUUID()}`;
+        t.usuarios[token] = { id: `u-teste-${papel}`, email: `${papel}@teste.kennismarket.invalid`, nome, papel };
+        tokens[papel] = token;
+      }
+      t.lojas['loja-teste'] = { id: 'loja-teste', vendedor_id: 'u-teste-vendedor', nome: 'Loja de Teste', publicada: true, banida: false };
+      t.produtos['prod-teste'] = { id: 'prod-teste', loja_id: 'loja-teste', titulo: 'Mentoria de teste', preco_kn: 100, ativo: true };
+      return { tokens, lojaId: 'loja-teste', produtoId: 'prod-teste' };
     },
   };
 }

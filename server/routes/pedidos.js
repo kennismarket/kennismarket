@@ -1,15 +1,15 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
-import { knParaCentavos, centavosParaReais } from '../lib/dinheiro.js';
+import { documentoValido } from '../lib/documentos.js';
+import { dividirVenda, knParaCentavos, PORCENTAGEM_PLATAFORMA } from '../lib/dinheiro.js';
+import { recebedorDaLinha } from '../lib/recebimento.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
 
-const FORMAS = ['PIX', 'BOLETO', 'CREDIT_CARD', 'UNDEFINED'];
 const diaDaqui = (dias) => new Date(Date.now() + dias * 864e5).toISOString().slice(0, 10);
-const soDigitos = (s) => String(s || '').replace(/\D/g, '');
 
-export function rotasPedidos({ repo, asaas }) {
+export function rotasPedidos({ repo, pagamentos }) {
   const r = Router();
-  r.use(exigirUsuario(repo));
+  r.use(exigirUsuario(repo, pagamentos));
 
   async function carregar(req, papeisPermitidos) {
     const p = await repo.pedido(req.params.id);
@@ -29,17 +29,21 @@ export function rotasPedidos({ repo, asaas }) {
     return novo;
   }
 
-  // Cliente compra um produto: cria o pedido e a cobrança no Asaas no valor exato.
+  // Cliente compra um produto: cria o pedido e a cobrança com o split (50/50) no valor exato.
   r.post('/', rota(async (req, res) => {
     const { produtoId, formaPagamento, cpfCnpj, moedaExibida } = req.body || {};
-    if (!FORMAS.includes(formaPagamento)) throw erro(400, `formaPagamento: ${FORMAS.join(', ')}`);
-    const documento = soDigitos(cpfCnpj);
-    if (![11, 14].includes(documento.length)) throw erro(400, 'CPF ou CNPJ inválido');
+    if (!pagamentos.formas.includes(formaPagamento)) throw erro(400, `formaPagamento: ${pagamentos.formas.join(', ')}`);
+    const documento = documentoValido(cpfCnpj);
+    if (!documento) throw erro(400, 'CPF ou CNPJ inválido');
 
     const produto = produtoId && await repo.produto(produtoId);
     const loja = produto && await repo.loja(produto.loja_id);
     if (!produto?.ativo || !loja?.publicada || loja.banida) throw erro(404, 'produto não encontrado');
     if (loja.vendedor_id === req.usuario.id) throw erro(400, 'você não pode comprar da própria loja');
+    const recebimento = await repo.dadosRecebimento(loja.id);
+    if (!recebimento || recebimento.situacao !== 'pronto' || recebimento.provedor !== pagamentos.provedor) {
+      throw erro(409, 'esta loja ainda não cadastrou (ou precisa confirmar de novo) como recebe os pagamentos');
+    }
 
     // 1 KN = 1 euro: converte para reais com a cotação do dia e congela no pedido.
     const cotacoes = await repo.ultimasCotacoes();
@@ -47,6 +51,7 @@ export function rotasPedidos({ repo, asaas }) {
     if (!brl) throw erro(503, 'ainda sem cotação do euro salva');
     const exibida = moedaExibida ? String(moedaExibida).toUpperCase() : null;
     const valorCentavos = knParaCentavos(produto.preco_kn, brl.taxa);
+    const { vendedor, plataforma } = dividirVenda(valorCentavos);
 
     const pedido = await repo.criarPedido({
       id: crypto.randomUUID(),
@@ -59,37 +64,42 @@ export function rotasPedidos({ repo, asaas }) {
       moeda_exibida: exibida,
       cotacao_exibida: exibida === 'EUR' ? 1 : Number(cotacoes.find((c) => c.moeda === exibida)?.taxa) || null,
       valor_centavos: valorCentavos,
+      taxa_percentual: PORCENTAGEM_PLATAFORMA,
+      vendedor_centavos: vendedor,
+      plataforma_centavos: plataforma,
       forma_pagamento: formaPagamento,
+      provedor: pagamentos.provedor,
+      repasse_status: 'aguardando',
     });
 
     try {
-      const achado = await asaas.buscarClientePorEmail(req.usuario.email);
-      const clienteId = achado?.data?.[0]?.id
-        || (await asaas.criarCliente({ name: req.usuario.nome, email: req.usuario.email, cpfCnpj: documento })).id;
-      const cobranca = await asaas.criarCobranca({
-        customer: clienteId,
-        billingType: formaPagamento,
-        value: centavosParaReais(valorCentavos),
-        dueDate: diaDaqui(formaPagamento === 'BOLETO' ? 3 : 1),
-        description: `${produto.titulo} · Kennismarket`.slice(0, 500),
-        externalReference: pedido.id,
+      const cobranca = await pagamentos.criarCobranca({
+        pedidoId: pedido.id,
+        valorCentavos,
+        forma: formaPagamento,
+        descricao: `${produto.titulo} · Kennismarket`.slice(0, 140),
+        vencimento: diaDaqui(formaPagamento === 'boleto' ? 3 : 1),
+        pagador: { nome: req.usuario.nome, email: req.usuario.email, documento },
+        divisao: { vendedor: { centavos: vendedor, recebedor: recebedorDaLinha(recebimento) }, plataforma: { centavos: plataforma } },
       });
-      await repo.atualizarPedidos({ id: pedido.id },
-        { asaas_cobranca_id: cobranca.id, link_pagamento: cobranca.invoiceUrl }, { status: ['aguardando_pagamento'] });
+      await repo.atualizarPedidos({ id: pedido.id }, {
+        cobranca_id: cobranca.cobrancaId,
+        link_pagamento: cobranca.linkPagamento ?? null,
+        pix_copia_cola: cobranca.pix?.copiaECola ?? null,
+        linha_digitavel: cobranca.boleto?.linhaDigitavel ?? null,
+      }, { status: ['aguardando_pagamento'] });
 
-      const resposta = {
+      res.status(201).json({
         id: pedido.id,
         status: 'aguardando_pagamento',
         valorKn: produto.preco_kn,
         valorCentavos,
         cotacao: { brl: Number(brl.taxa), data: brl.data },
-        linkPagamento: cobranca.invoiceUrl,
-      };
-      if (formaPagamento === 'PIX') {
-        const qr = await asaas.qrCodePix(cobranca.id);
-        resposta.pix = { imagem: qr.encodedImage, copiaECola: qr.payload, validoAte: qr.expirationDate };
-      }
-      res.status(201).json(resposta);
+        divisao: { vendedorCentavos: vendedor, plataformaCentavos: plataforma },
+        pix: cobranca.pix ?? null,
+        boleto: cobranca.boleto ?? null,
+        linkPagamento: cobranca.linkPagamento ?? null,
+      });
     } catch (e) {
       // A cobrança não foi criada: o pedido não vale.
       await repo.atualizarPedidos({ id: pedido.id }, { status: 'cancelado' }, { status: ['aguardando_pagamento'] }).catch(() => {});
@@ -121,8 +131,7 @@ export function rotasPedidos({ repo, asaas }) {
     const anterior = p.status;
     await mudar(p, ['pago', 'entregue', 'concluido'], { status: 'reembolso_solicitado' });
     try {
-      const pedidoReembolso = await repo.criarReembolso({ pedido_id: p.id, motivo: motivo.slice(0, 2000), status_anterior: anterior });
-      res.status(201).json(pedidoReembolso);
+      res.status(201).json(await repo.criarReembolso({ pedido_id: p.id, motivo: motivo.slice(0, 2000), status_anterior: anterior }));
     } catch (e) {
       await repo.atualizarPedidos({ id: p.id }, { status: anterior }, { status: ['reembolso_solicitado'] });
       throw e;

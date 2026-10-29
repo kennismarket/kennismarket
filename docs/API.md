@@ -10,7 +10,7 @@ Endereços marcados com 🔒 exigem login: o navegador manda o token do Supabase
 | Endereço | O que faz |
 |---|---|
 | `GET /api/vivo` | Responde `{ok:true}`. O Render usa para saber se o site está de pé. |
-| `GET /api/saude` | Mostra o que está configurado e testa a conexão com o Supabase (sem mostrar chaves). |
+| `GET /api/saude` | Mostra o que está configurado (Supabase e banco de pagamento) e testa a conexão com o Supabase. Nunca mostra chaves. |
 | `GET /api/config` | O que o navegador pode saber: endereço do Supabase e chave pública. |
 
 ## Cotações (públicas)
@@ -27,18 +27,52 @@ Fontes: [Frankfurter](https://frankfurter.dev) (dados oficiais do Banco Central 
 [ExchangeRate-API](https://www.exchangerate-api.com). Os termos da ExchangeRate-API pedem um link de crédito no site:
 `<a href="https://www.exchangerate-api.com">Rates By Exchange Rate API</a>` (pode ser discreto, no rodapé da tabela de conversões).
 
+## Pagamentos: como funciona por dentro
+
+Toda conversa com o banco de pagamento fica no **módulo de pagamento** (`server/pagamentos/`).
+As rotas abaixo nunca falam direto com o banco. O banco é escolhido pela variável `PAYMENT_PROVIDER`:
+
+- `simulado`: banco de mentira, para testes. Ativa a página `/teste/pagamentos`.
+- `transfeera`: ainda é só um esqueleto. Responde "pendente" (HTTP 501) até chegar a documentação da API.
+
+## Loja do vendedor 🔒
+
+**`PUT /api/loja/recebimento`**: o vendedor informa como recebe a parte dele. Não cria conta em banco nenhum.
+
+```json
+{ "nome": "Ana Souza", "cpfCnpj": "529.982.247-25", "pix": { "chave": "ana@email.com", "tipo": "email" } }
+```
+
+ou com dados bancários:
+
+```json
+{ "nome": "Ana Souza", "cpfCnpj": "529.982.247-25", "banco": { "codigo": "001", "agencia": "1234", "conta": "56789-0", "tipoConta": "corrente" } }
+```
+
+Tipo da chave Pix: `cpf`, `cnpj`, `email`, `telefone` ou `aleatoria`. Tipo de conta: `corrente` ou `poupanca`.
+⚠️ Os campos vão ser ajustados quando chegar a documentação da Transfeera.
+
+**`GET /api/loja/recebimento`**: situação do cadastro (`pronto`, `pendente`, `recusado`, `nao_cadastrado` ou
+`confirmar_de_novo`, quando o banco de pagamento mudou desde o cadastro).
+
+Uma loja só vende depois que o cadastro de recebimento está `pronto`.
+
 ## Pedidos 🔒
 
 **`POST /api/pedidos`**: o cliente compra um produto.
 
 ```json
-{ "produtoId": "…", "formaPagamento": "PIX", "cpfCnpj": "987.654.321-00", "moedaExibida": "USD" }
+{ "produtoId": "…", "formaPagamento": "pix", "cpfCnpj": "111.444.777-35", "moedaExibida": "USD" }
 ```
 
-`formaPagamento`: `PIX`, `BOLETO`, `CREDIT_CARD` ou `UNDEFINED` (o cliente escolhe na página do Asaas).
-O preço em KN do produto é convertido para reais com a cotação do dia, e o valor e a cotação ficam gravados no pedido.
-Resposta: `linkPagamento` (página do Asaas, usada para cartão e boleto) e, no Pix, `pix.imagem` (QR em base64) e `pix.copiaECola`.
-Dados de cartão **nunca** passam pelo site: o cliente digita na página do Asaas.
+`formaPagamento`: `pix` ou `boleto`. O `cartao` só aparece quando `PAYMENT_CARD_ENABLED=true`.
+
+1. O preço em KN do produto é convertido para reais com a cotação do dia.
+2. A divisão é calculada: 50% para o vendedor e 50% para o Kennismarket, sobre o valor cheio. O centavo quebrado fica com o vendedor.
+3. A cobrança é criada já com o split.
+
+O pedido guarda o valor em KN, o valor em reais, a cotação e a data, a porcentagem, as duas partes e as situações.
+A resposta traz `divisao`, e `pix.copiaECola` no Pix, `boleto.linhaDigitavel` no boleto ou `linkPagamento` no cartão.
 
 | Endereço | Quem | O que faz |
 |---|---|---|
@@ -47,53 +81,63 @@ Dados de cartão **nunca** passam pelo site: o cliente digita na página do Asaa
 | `POST /api/pedidos/:id/recebido` | cliente | Confirma que recebeu |
 | `POST /api/pedidos/:id/reembolso` | cliente | Pede reembolso: `{ "motivo": "…" }`. O suporte analisa. |
 
-### Situações do pedido
+### Situação do pagamento (`status`)
 
-| `status` | Significa |
+| Valor | Significa |
 |---|---|
 | `aguardando_pagamento` | Cobrança criada, cliente ainda não pagou |
-| `pago` | Pagamento aprovado: o vendedor já pode atender |
+| `pago` | Pagamento confirmado: o vendedor já pode atender |
 | `entregue` | Vendedor entregou |
 | `concluido` | Cliente confirmou que recebeu |
 | `reembolso_solicitado` | Suporte analisando |
 | `reembolsado` | Dinheiro devolvido ao cliente |
-| `contestado` | Cliente contestou o cartão no banco |
-| `cancelado` | Cobrança apagada antes do pagamento |
+| `contestado` | Cliente contestou no banco (só com cartão) |
+| `cancelado` | Cobrança cancelada ou não criada |
 
-### Repasse ao vendedor (`repasse_status`)
+### Situação do repasse ao vendedor (`repasse_status`)
+
+O split é instantâneo: a parte do vendedor sai junto com o pagamento.
 
 | Valor | Significa |
 |---|---|
-| `aguardando_dinheiro` | Cartão aprovado, dinheiro ainda não caiu (~30 dias) |
-| `pendente` | Dinheiro na conta, repasse vai sair |
-| `enviando` | Pedido de transferência a caminho do Asaas. **Se ficar parado aqui com `repasse_erro` "CONFERIR NO ASAAS"**, a resposta do Asaas se perdeu: confira no painel do Asaas se a transferência saiu antes de fazer qualquer coisa. |
-| `enviado` | Asaas aceitou a transferência |
-| `concluido` | Dinheiro chegou ao vendedor |
-| `falhou` | Asaas recusou; a tarefa de hora em hora tenta de novo (até 5 vezes) |
+| `aguardando` | Pagamento ainda não confirmado |
+| `processando` | Pago; o banco está fazendo o split |
+| `repassado` | A parte do vendedor chegou a ele |
+| `falhou` | O banco avisou que o split falhou: o suporte resolve com o banco |
 
 ## Suporte 👑
 
 | Endereço | O que faz |
 |---|---|
-| `POST /api/admin/reembolsos/:id` | `{ "aprovar": true }` devolve tudo pelo Asaas; `{ "aprovar": true, "valorCentavos": 3000 }` devolve R$ 30,00; `{ "aprovar": false }` nega e o pedido volta para onde estava. |
-| `POST /api/admin/pedidos/:id/repasse` | Repasse travado: `{ "acao": "tentar_de_novo" }` (só depois de conferir no Asaas que o dinheiro **não** saiu) ou `{ "acao": "marcar_enviado", "repasseId": "tra_…" }` (conferiu e saiu). |
+| `POST /api/admin/reembolsos/:id` | `{ "aprovar": true }` devolve tudo; `{ "aprovar": true, "valorCentavos": 3000 }` devolve R$ 30,00; `{ "aprovar": false }` nega, e o pedido volta para onde estava. O dinheiro sai do caixa do Kennismarket, e o **débito do vendedor** (a parte dele, proporcional ao valor devolvido) fica anotado. |
+| `GET /api/admin/debitos?situacao=aberto` | Débitos de vendedores anotados nos reembolsos (só registro; a cobrança é por fora). |
+| `POST /api/admin/pedidos/:id/atualizar-status` | Pergunta ao banco a situação da cobrança e do split, e corrige o pedido se algum aviso se perdeu. |
 
-## Avisos do Asaas
+## Aviso do banco (webhook)
 
-**`POST /api/webhooks/asaas`**: o Asaas chama sozinho. Confere o token, ignora avisos repetidos e:
+**`POST /api/webhooks/pagamento`**: o banco chama sozinho. O módulo de pagamento confere se o aviso veio
+mesmo do banco (assinatura); se não veio, responde 401. Cada aviso é processado uma vez só.
 
-- `PAYMENT_CONFIRMED` (cartão aprovado) → `pago`, repasse aguarda o dinheiro cair
-- `PAYMENT_RECEIVED` (dinheiro na conta) → `pago` e envia a metade do vendedor por Pix
-- `PAYMENT_REFUNDED` → `reembolsado`
-- `PAYMENT_DELETED` → `cancelado`
-- `PAYMENT_CHARGEBACK_REQUESTED` → `contestado`
-- `TRANSFER_DONE` → repasse `concluido`; `TRANSFER_FAILED`/`TRANSFER_CANCELLED` → `falhou` (tenta de novo)
+| Evento (formato do módulo) | Efeito no pedido |
+|---|---|
+| `pago` | `pago`; repasse `processando` ou o que o aviso disser (no split instantâneo, normalmente `repassado`) |
+| `repasse_concluido` | repasse `repassado` |
+| `repasse_falhou` | repasse `falhou` |
+| `devolvido` | `reembolsado` |
+| `cancelado` | `cancelado` (se ainda não pago) |
 
-## Tarefas agendadas
+⚠️ Como a Transfeera assina os avisos e quais eventos manda: pendente da documentação.
 
-Chamadas pelo GitHub (`.github/workflows/tarefas.yml`) com o cabeçalho `x-tarefas-token`.
+## Página de teste (só com `PAYMENT_PROVIDER=simulado`)
+
+`/teste/pagamentos` percorre o fluxo inteiro: prepara contas e loja de teste, compra, simula o pagamento,
+pede e decide o reembolso e mostra o débito anotado. Com qualquer outro banco, a página e os endereços
+`/api/teste/*` respondem 404, e as contas de teste (`@teste.kennismarket.invalid`) param de funcionar.
+
+## Tarefa agendada
+
+Chamada pelo GitHub (`.github/workflows/tarefas.yml`) com o cabeçalho `x-tarefas-token`.
 
 | Endereço | Quando |
 |---|---|
 | `POST /api/tarefas/cotacoes` | Todo dia às 16h30 UTC (13h30 em Brasília) |
-| `POST /api/tarefas/repasses` | De hora em hora |

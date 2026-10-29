@@ -12,7 +12,11 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: ASAAS_AMBIENTE
+      - key: PAYMENT_PROVIDER
+        value: simulado
+      - key: PAYMENT_CARD_ENABLED
+        value: "false"
+      - key: TRANSFEERA_AMBIENTE
         value: sandbox
       - key: SUPABASE_URL
         sync: false
@@ -20,9 +24,11 @@ services:
         sync: false
       - key: SUPABASE_SECRET_KEY
         sync: false
-      - key: ASAAS_API_KEY
+      - key: TRANSFEERA_CLIENT_ID
         sync: false
-      - key: ASAAS_WEBHOOK_TOKEN
-        generateValue: true
+      - key: TRANSFEERA_CLIENT_SECRET
+        sync: false
+      - key: TRANSFEERA_WEBHOOK_SECRET
+        sync: false
       - key: TAREFAS_TOKEN
         generateValue: true

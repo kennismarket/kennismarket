@@ -1,8 +1,10 @@
 // Regras de dinheiro. Valores em reais são sempre em CENTAVOS (número inteiro),
 // para nunca ter erro de arredondamento com casas decimais.
 
-// Decisão dos donos: toda venda é dividida 50/50 entre vendedor e Kennismarket.
+// Decisão dos donos: toda venda é dividida 50/50 entre vendedor e Kennismarket,
+// sobre o valor cheio cobrado do cliente. A taxa do banco sai da parte do Kennismarket.
 export const PORCENTAGEM_VENDEDOR = 50;
+export const PORCENTAGEM_PLATAFORMA = 100 - PORCENTAGEM_VENDEDOR;
 
 // 1 KN Coin = 1 euro. O preço em reais usa a cotação do euro do dia.
 export function knParaCentavos(kn, cotacaoBrl) {
@@ -12,17 +14,19 @@ export function knParaCentavos(kn, cotacaoBrl) {
   return Math.round(kn * taxa * 100);
 }
 
-// Divide o valor que sobrou depois da taxa do Asaas.
 // O centavo quebrado fica com o vendedor, e a soma bate exatamente com o total.
-export function dividirVenda(baseCentavos) {
-  if (!Number.isInteger(baseCentavos) || baseCentavos <= 0) throw new Error('Valor inválido');
-  const plataforma = Math.floor((baseCentavos * (100 - PORCENTAGEM_VENDEDOR)) / 100);
-  return { vendedor: baseCentavos - plataforma, plataforma };
+export function dividirVenda(totalCentavos) {
+  if (!Number.isInteger(totalCentavos) || totalCentavos <= 0) throw new Error('Valor inválido');
+  const plataforma = Math.floor((totalCentavos * PORCENTAGEM_PLATAFORMA) / 100);
+  return { vendedor: totalCentavos - plataforma, plataforma };
 }
 
-// O Asaas trabalha com reais em número decimal (ex.: 99.01).
-export const centavosParaReais = (c) => Math.round(c) / 100;
-export const reaisParaCentavos = (r) => Math.round(Number(r) * 100);
+// Num reembolso aprovado, o Kennismarket devolve ao cliente, mas o vendedor já recebeu a parte dele.
+// O débito do vendedor é a parte dele proporcional ao valor devolvido (total: a parte inteira).
+export function debitoDoVendedor(pedido, devolvidoCentavos) {
+  if (devolvidoCentavos >= pedido.valor_centavos) return pedido.vendedor_centavos;
+  return Math.round((devolvidoCentavos * pedido.vendedor_centavos) / pedido.valor_centavos);
+}
 
 export function formatarReais(centavos) {
   return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

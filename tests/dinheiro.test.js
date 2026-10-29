@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dividirVenda, knParaCentavos, reaisParaCentavos } from '../server/lib/dinheiro.js';
+import { debitoDoVendedor, dividirVenda, knParaCentavos, PORCENTAGEM_PLATAFORMA } from '../server/lib/dinheiro.js';
 
-test('toda venda é dividida 50/50', () => {
+test('toda venda é dividida 50/50 sobre o valor cheio', () => {
+  assert.equal(PORCENTAGEM_PLATAFORMA, 50);
   assert.deepEqual(dividirVenda(10000), { vendedor: 5000, plataforma: 5000 });
 });
 
@@ -10,7 +11,7 @@ test('centavo quebrado fica com o vendedor e a soma bate', () => {
   for (const total of [1, 7, 333, 9999, 12345]) {
     const d = dividirVenda(total);
     assert.equal(d.vendedor + d.plataforma, total);
-    assert.ok(d.vendedor - d.plataforma <= 1);
+    assert.ok(d.vendedor - d.plataforma <= 1 && d.vendedor >= d.plataforma);
   }
   assert.deepEqual(dividirVenda(333), { vendedor: 167, plataforma: 166 });
 });
@@ -21,9 +22,11 @@ test('KN (= euro) vira centavos de real pela cotação', () => {
   assert.equal(knParaCentavos(3, 5.665), 1700); // 16,995 arredonda para 17,00
 });
 
-test('reais do Asaas viram centavos sem erro de vírgula', () => {
-  assert.equal(reaisParaCentavos(611.35), 61135);
-  assert.equal(reaisParaCentavos(0.29), 29);
+test('débito do vendedor num reembolso: a parte dele, proporcional ao devolvido', () => {
+  const p = { valor_centavos: 333, vendedor_centavos: 167 };
+  assert.equal(debitoDoVendedor(p, 333), 167); // total: a parte inteira
+  assert.equal(debitoDoVendedor(p, 100), 50);
+  assert.equal(debitoDoVendedor({ valor_centavos: 61234, vendedor_centavos: 30617 }, 1000), 500);
 });
 
 test('recusa valores inválidos', () => {
