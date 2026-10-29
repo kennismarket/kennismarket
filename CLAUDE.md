@@ -18,23 +18,23 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 ## Mercado, idioma e moeda
 - Público e vendedores: **Brasil**. Cobrança em **reais (R$)** via **Asaas**.
 - Interface: o site **abre sempre em holandês** pra qualquer visitante, com tradução opcional para inglês, espanhol e português. Isso é decisão confirmada dos donos, mesmo com o público sendo brasileiro: o seletor de idioma tem que ser fácil de achar.
-- Moeda interna: **KN Coins** (símbolo K, abreviação KN).
+- Moeda interna: **KN Coins** (símbolo K, abreviação KN). **1 KN = 1 euro**: o preço em reais acompanha a cotação diária do euro (Banco Central Europeu), congelada no pedido no momento da compra.
   - KN Coins **só podem ser comprados dentro da loja, no valor exato do pedido**. Não existe compra avulsa de moedas.
   - O cliente só é atendido com o pedido já pago.
 
 ## Pagamentos e dinheiro
 - Processador: **Asaas**, em conta no CPF de um dos donos (ainda sem CNPJ). O plano é abrir o CNPJ (Kennismarket Ltda) com o dinheiro das primeiras vendas.
 - O nome pessoal do dono não deve aparecer pros compradores no Pix (privacidade).
-- Divisão de cada venda (split do Asaas):
-  - Vendedor que abre loja normalmente, por inscrição: **taxa de 15%** pro Kennismarket.
-  - Vendedor que entrou por **link de convite**: **divisão 50/50**. É um acordo à parte e não aparece nos termos de uso.
+- Divisão de cada venda: **50/50 em todas as vendas**, sobre o valor líquido (depois da taxa do Asaas).
+- **O vendedor recebe antes da confirmação do cliente**: assim que o dinheiro cai na conta do Kennismarket, a metade dele vai por Pix para a chave dele (sem subconta, porque a conta ainda é CPF). No cartão, isso só acontece quando o Asaas libera o dinheiro (~30 dias).
+- Se houver golpe, os donos resolvem direto com o cliente e **banem o vendedor** (loja banida não recebe repasses).
 - **Links de convite**: só os donos criam, e eles são enviados por e-mail pra vendedores/afiliados criarem a loja.
 - **Garantia ao vendedor**: se o cliente receber e não pagar, o Kennismarket paga o vendedor e trata o caso juridicamente.
 
 ## Reembolsos
 - **Nunca automáticos.** O cliente clica em "Solicitar reembolso", e o suporte analisa caso a caso (pra evitar golpe contra vendedor).
 - O botão só aparece/libera quando o cliente pede.
-- Reembolso **sempre em dinheiro**, nunca em KN Coins.
+- Reembolso **sempre em dinheiro**, nunca em KN Coins. Como o vendedor já recebeu, o dinheiro do reembolso sai do caixa do Kennismarket.
 - Depois de receber o pedido, só tem reembolso se o que chegou não condiz com o pedido ou com o que a loja mostrava (conta/portfólio).
 
 ## Marca
@@ -47,13 +47,16 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 - **Node.js**, com o código no **GitHub**.
 - **Supabase** pra login, banco de dados e armazenamento de arquivos.
 - **Asaas** pra pagamentos. Usar o **modo sandbox** até os donos autorizarem o dinheiro real.
-- Hospedagem prevista: **Hostinger** (plano de hospedagem Node.js gerenciada, com deploy pelo GitHub).
+- Hospedagem: **versão de testes no Render** (plano grátis, `render.yaml`). Depois, **Hostinger** (Node.js gerenciada, com deploy pelo GitHub).
+- Tarefas agendadas (cotação diária, nova tentativa de repasses) rodam pelo **GitHub Actions** (`.github/workflows/tarefas.yml`), porque servidor grátis dorme.
+- Nada de dados guardados em arquivo no servidor: tudo no Supabase.
 - Ponto de partida visual: `kennismarket-prototipo.html` (protótipo de uma página só, com dados simulados). Use como referência de layout e comportamento.
+- **Versão de testes**: pode ter lojas, clientes e avaliações inventadas como no protótipo (ninguém de verdade usa). Na versão real, só dados reais.
 
 ## Prioridades da primeira versão
 1. Cadastro/login de clientes e vendedores
 2. Lojas e cadastro de produtos/serviços
-3. Checkout com Asaas (sandbox) e split
+3. Checkout com Asaas (sandbox) e repasse 50/50 por Pix
 4. Pedidos, entrega e solicitação de reembolso
 5. Chat simples entre cliente e vendedor
 6. Painel do vendedor com o valor a receber

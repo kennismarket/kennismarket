@@ -1,0 +1,20 @@
+/* Cores da marca (CLAUDE.md). O modo escuro segue a configuração do aparelho. */
+:root {
+  --bg: #F3F6F9; --surface: #FFFFFF; --surface-2: #EAEFF4;
+  --ink: #102A43; --muted: #526579; --line: #DAE2EA;
+  --primary: #102A43; --on-primary: #FFFFFF;
+  --safe: #16805D; --danger: #B42318; --warn: #8F5300;
+  --f-display: "Bricolage Grotesque", "Arial Narrow", Arial, sans-serif;
+  --f-body: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B1622; --surface: #122233; --surface-2: #182B3F;
+    --ink: #E7EEF5; --muted: #9DB0C3; --line: #24384E;
+    --primary: #A9C3DE; --on-primary: #0B1622;
+    --safe: #3FBF8F; --danger: #F08A80; --warn: #E8B45E;
+    color-scheme: dark;
+  }
+}

@@ -1,0 +1,28 @@
+# Configuração do Render (versão de TESTES, plano grátis).
+# Render → New → Blueprint → escolha este repositório. Ele lê este arquivo e cria o serviço.
+# Os valores marcados com "sync: false" são pedidos na tela do Render e NÃO ficam no GitHub.
+services:
+  - type: web
+    name: kennismarket
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/vivo
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: ASAAS_AMBIENTE
+        value: sandbox
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: ASAAS_API_KEY
+        sync: false
+      - key: ASAAS_WEBHOOK_TOKEN
+        generateValue: true
+      - key: TAREFAS_TOKEN
+        generateValue: true
