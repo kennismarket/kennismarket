@@ -16,6 +16,11 @@ export function rotasSaude({ pagamentos }) {
         chaveSecreta: secretKey ? 'preenchida' : 'NÃO PREENCHIDA',
         conexao: await testarSupabase(),
       },
+      // Qual versão do código está no ar. O Render preenche estas duas variáveis sozinho.
+      versao: {
+        branch: process.env.RENDER_GIT_BRANCH || 'desconhecida',
+        commit: (process.env.RENDER_GIT_COMMIT || 'desconhecido').slice(0, 7),
+      },
       pagamentos: pagamentos.situacao(),
       avisos,
     });
