@@ -45,6 +45,7 @@ test('lê os formatos de resposta mais comuns', () => {
 
 test('sem cotação salva, a rota avisa em vez de inventar', async () => {
   assert.equal((await get('/api/cotacoes')).s, 503);
+  assert.equal((await get('/api/rates')).s, 503);
 });
 
 test('usa o BCE e completa com a reserva o que o BCE não tem', async () => {
@@ -77,6 +78,16 @@ test('atualizar no mesmo dia substitui em vez de duplicar', async () => {
   const h = (await get('/api/cotacoes/historico/USD')).j.historico;
   assert.equal(h.filter((x) => x.data === '2026-10-28').length, 1);
   assert.equal(h[0].taxa, 1.2);
+});
+
+test('formato do protótipo (RATES_URL): /api/rates com base, date e rates, aberto para outros sites', async () => {
+  const r = await fetch(base + '/api/rates');
+  assert.equal(r.headers.get('access-control-allow-origin'), '*');
+  const j = await r.json();
+  assert.equal(j.base, 'EUR');
+  assert.match(j.date, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(j.rates.EUR, 1);
+  assert.ok(j.rates.BRL > 0 && j.rates.USD > 0);
 });
 
 test('datas e moedas inválidas são recusadas', async () => {

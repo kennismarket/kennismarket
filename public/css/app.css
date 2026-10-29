@@ -6,8 +6,12 @@ p { margin: 0; }
 
 .top { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
 .top .wrap { display: flex; align-items: center; gap: 12px; height: 64px; }
-.logo { display: flex; align-items: center; gap: 10px; font: 700 20px var(--f-display); color: var(--ink); text-decoration: none; }
-.logo img { width: 32px; height: 32px; }
+/* Logo: igual ao protótipo (texto "Kennismarket." com o ponto verde). */
+.logo { font-family: var(--f-display); font-weight: 800; font-size: 27px; letter-spacing: -.04em; color: var(--primary); background: none; border: 0; padding: 0; line-height: 1; text-decoration: none; }
+.logo span { color: var(--safe); }
+.top .logo { font-size: 22px; min-height: 44px; display: inline-flex; align-items: center; }
+@media (max-width: 440px) { .top .logo { font-size: 20px; } }
+@media (max-width: 380px) { .top .logo { font-size: 16px; } }
 .grow { flex: 1; }
 
 /* Seletor de idioma: sempre visível, também no celular. */

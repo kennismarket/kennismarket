@@ -38,8 +38,7 @@ test('nenhuma referência ao processador antigo no projeto (só no histórico da
   const versionados = execFileSync('git', ['ls-files', '-co', '--exclude-standard'], { cwd: raiz, encoding: 'utf8' }).split('\n').filter(Boolean);
   const achados = versionados
     // As migrações e os dados no formato antigo (usados para testar a conversão) são histórico.
-    // O protótipo é a referência visual dos donos: só eles decidem os textos dele (ver CLAUDE.md).
-    .filter((f) => !f.startsWith('supabase/migrations/') && f !== 'tests/sql/dados-antigos.sql' && f !== 'kennismarket-prototipo.html')
+    .filter((f) => !f.startsWith('supabase/migrations/') && f !== 'tests/sql/dados-antigos.sql')
     .filter((f) => !/\.(png|jpe?g|ico|woff2?)$/.test(f))
     .filter((f) => { try { return new RegExp(nome, 'i').test(readFileSync(join(raiz, f), 'utf8')); } catch { return false; } });
   assert.deepEqual(achados, []);
