@@ -40,12 +40,7 @@ if (supabase.url && !/^https:\/\/.+/.test(supabase.url)) {
 export const config = {
   porta: Number(env.PORT) || 3000,
   supabase,
-  asaas: {
-    ambiente: env.ASAAS_AMBIENTE === 'producao' ? 'producao' : 'sandbox',
-    apiKey: limpo(env.ASAAS_API_KEY),
-    webhookToken: limpo(env.ASAAS_WEBHOOK_TOKEN),
-  },
-  // Senha que a tarefa agendada do GitHub manda para disparar cotações e repasses.
+  // Senha que a tarefa agendada do GitHub manda para disparar a atualização das cotações.
   tarefasToken: limpo(env.TAREFAS_TOKEN),
   suporteEmail: 'kennismarket.support@protonmail.com',
 };

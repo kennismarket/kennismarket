@@ -1,20 +1,20 @@
-// Fluxo completo de venda contra um Asaas SIMULADO e um banco em memória.
-// Não toca no Asaas nem no Supabase de verdade.
+// Fluxo completo de venda com o provedor de pagamento SIMULADO e um banco de dados em memória.
+// Não toca em nenhum banco de pagamento nem no Supabase de verdade.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { criarRepoMemoria } from './apoio/repo-memoria.js';
-import { iniciarAsaasSimulado } from './apoio/asaas-simulado.js';
 
-let simulado, repo, base, servidor;
+const CPF_CLIENTE = '111.444.777-35';
+const CPF_VENDEDORA = '52998224725';
+const cfg = (provedor, extra = {}) => ({
+  provedor, cartaoAtivo: false, simulado: { segredo: 'segredo-teste' },
+  transfeera: { ambiente: 'sandbox', clientId: '', clientSecret: '', webhookSecret: '' }, ...extra,
+});
 
-before(async () => {
-  simulado = await iniciarAsaasSimulado();
-  Object.assign(process.env, {
-    ASAAS_BASE_URL: simulado.url, ASAAS_API_KEY: 'chave-teste', ASAAS_WEBHOOK_TOKEN: 'whk', TAREFAS_TOKEN: 'tarefas',
-  });
-  const { criarApp } = await import('../server/app.js');
-  repo = criarRepoMemoria();
-  const t = repo.tabelas;
+let criarApp, criarPagamentos, repo, pagamentos, base, servidor;
+
+function popular(r) {
+  const t = r.tabelas;
   t.usuarios = {
     'tok-cliente': { id: 'u-cliente', email: 'joao@x.com', nome: 'João', papel: 'cliente' },
     'tok-vendedor': { id: 'u-vendedor', email: 'ana@x.com', nome: 'Ana', papel: 'vendedor' },
@@ -22,75 +22,112 @@ before(async () => {
     'tok-dono': { id: 'u-dono', email: 'lucas@x.com', nome: 'Lucas', papel: 'dono' },
   };
   t.lojas = { loja1: { id: 'loja1', vendedor_id: 'u-vendedor', publicada: true, banida: false } };
-  t.dadosRepasse = { loja1: { loja_id: 'loja1', cpf_cnpj: '12345678909', pix_chave: 'ana@x.com', pix_tipo: 'EMAIL' } };
   t.produtos = { prod1: { id: 'prod1', loja_id: 'loja1', titulo: 'Mentoria', preco_kn: 100, ativo: true } };
   t.cotacoes = [
     { data: '2026-10-26', moeda: 'BRL', taxa: 6.0, fonte: 'bce' },
     { data: '2026-10-27', moeda: 'BRL', taxa: 6.1234, fonte: 'bce' },
     { data: '2026-10-27', moeda: 'USD', taxa: 1.12, fonte: 'bce' },
   ];
-  servidor = criarApp({ repo }).listen(0);
-  base = `http://localhost:${servidor.address().port}`;
+}
+
+async function subir(r, p) {
+  const s = criarApp({ repo: r, pagamentos: p }).listen(0);
+  return { s, url: `http://localhost:${s.address().port}` };
+}
+
+before(async () => {
+  Object.assign(process.env, { TAREFAS_TOKEN: 'tarefas' });
+  ({ criarApp } = await import('../server/app.js'));
+  ({ criarPagamentos } = await import('../server/pagamentos/index.js'));
+  repo = criarRepoMemoria();
+  popular(repo);
+  pagamentos = criarPagamentos(cfg('simulado'));
+  ({ s: servidor, url: base } = await subir(repo, pagamentos));
 });
+after(() => servidor.close());
 
-after(() => { servidor.close(); simulado.fechar(); });
-
-async function api(metodo, caminho, corpo, token, extras = {}) {
+async function api(metodo, caminho, corpo, token, { url = base, extras = {}, bruto } = {}) {
   const headers = { 'Content-Type': 'application/json', ...extras };
   if (token) headers.authorization = `Bearer ${token}`;
-  const r = await fetch(base + caminho, { method: metodo, headers, body: corpo ? JSON.stringify(corpo) : undefined });
-  return { s: r.status, j: await r.json().catch(() => null) };
+  const r = await fetch(url + caminho, { method: metodo, headers, body: bruto ?? (corpo ? JSON.stringify(corpo) : undefined) });
+  return { s: r.status, j: await r.json().catch(() => null), texto: r.headers.get('content-type') };
 }
-const aviso = (ev) => api('POST', '/api/webhooks/asaas', ev, null, { 'asaas-access-token': 'whk' });
-const comprar = (forma = 'PIX') => api('POST', '/api/pedidos', { produtoId: 'prod1', formaPagamento: forma, cpfCnpj: '987.654.321-00', moedaExibida: 'usd' }, 'tok-cliente');
-const transferencias = () => simulado.chamadas.filter((c) => c.url === '/v3/transfers');
+// Entrega um aviso do banco simulado pelo endereço real do webhook.
+const entregar = ({ corpoBruto, cabecalhos }) =>
+  api('POST', '/api/webhooks/pagamento', null, null, { bruto: corpoBruto, extras: cabecalhos });
+const comprar = (forma = 'pix', token = 'tok-cliente') =>
+  api('POST', '/api/pedidos', { produtoId: 'prod1', formaPagamento: forma, cpfCnpj: CPF_CLIENTE, moedaExibida: 'usd' }, token);
+const cadastrarVendedora = (corpo = { nome: 'Ana Souza', cpfCnpj: CPF_VENDEDORA, pix: { chave: 'ana@x.com', tipo: 'email' } }) =>
+  api('PUT', '/api/loja/recebimento', corpo, 'tok-vendedor');
+const pedidoDe = (id) => repo.tabelas.pedidos[id];
 
-test('compra exige login e dados válidos', async () => {
-  assert.equal((await api('POST', '/api/pedidos', {})).s, 401);
-  assert.equal((await api('POST', '/api/pedidos', { produtoId: 'prod1', formaPagamento: 'PIX', cpfCnpj: '123' }, 'tok-cliente')).s, 400);
-  assert.equal((await api('POST', '/api/pedidos', { produtoId: 'prod1', formaPagamento: 'PIX', cpfCnpj: '98765432100' }, 'tok-vendedor')).s, 400);
+test('loja sem dados de recebimento não vende', async () => {
+  assert.equal((await comprar()).s, 409);
 });
 
-test('Pix: KN vira reais pela cotação do euro, e o vendedor recebe 50% do líquido assim que o dinheiro cai', async () => {
+test('cadastro do vendedor: só os dados para receber, validados', async () => {
+  assert.equal((await api('PUT', '/api/loja/recebimento', {}, null)).s, 401);
+  assert.equal((await api('PUT', '/api/loja/recebimento', { nome: 'X', cpfCnpj: CPF_VENDEDORA }, 'tok-outro')).s, 404); // sem loja
+  assert.equal((await cadastrarVendedora({ nome: 'Ana', cpfCnpj: CPF_VENDEDORA })).s, 400); // sem Pix nem banco
+  assert.equal((await cadastrarVendedora({ nome: 'Ana', cpfCnpj: '123.456.789-00', pix: { chave: 'a@x.com', tipo: 'email' } })).s, 400); // CPF inválido
+  assert.equal((await cadastrarVendedora({ nome: 'Ana', cpfCnpj: CPF_VENDEDORA, pix: { chave: 'a@x.com', tipo: 'EVP-errado' } })).s, 400);
+  assert.equal((await cadastrarVendedora({ nome: 'Ana', cpfCnpj: CPF_VENDEDORA, banco: { codigo: '1', agencia: '1', conta: '1', tipoConta: 'x' } })).s, 400);
+  // dados bancários completos também servem
+  const banco = await cadastrarVendedora({ nome: 'Ana', cpfCnpj: CPF_VENDEDORA, banco: { codigo: '001', agencia: '1234', conta: '56789-0', tipoConta: 'corrente' } });
+  assert.equal(banco.s, 200);
+  assert.equal(banco.j.situacao, 'pronto');
+  // fica com a chave Pix
+  const ok = await cadastrarVendedora();
+  assert.equal(ok.s, 200);
+  const linha = repo.tabelas.dadosRecebimento.loja1;
+  assert.deepEqual([linha.pix_tipo, linha.provedor, linha.situacao, linha.banco_codigo], ['email', 'simulado', 'pronto', null]);
+  assert.match(linha.provedor_recebedor_id, /^rec_sim_/);
+  assert.equal((await api('GET', '/api/loja/recebimento', null, 'tok-vendedor')).j.situacao, 'pronto');
+});
+
+test('compra exige login e dados válidos; cartão está desligado', async () => {
+  assert.equal((await api('POST', '/api/pedidos', {})).s, 401);
+  assert.equal((await api('POST', '/api/pedidos', { produtoId: 'prod1', formaPagamento: 'pix', cpfCnpj: '123' }, 'tok-cliente')).s, 400);
+  assert.equal((await api('POST', '/api/pedidos', { produtoId: 'prod1', formaPagamento: 'PIX', cpfCnpj: CPF_CLIENTE }, 'tok-cliente')).s, 400);
+  assert.equal((await comprar('cartao')).s, 400);
+  assert.equal((await comprar('pix', 'tok-vendedor')).s, 400); // da própria loja
+});
+
+test('Pix: KN vira reais pela cotação do euro, split 50/50 no valor cheio, repasse junto com o pagamento', async () => {
   const c = await comprar();
   assert.equal(c.s, 201);
-  // 100 KN × 6,1234 = R$ 612,34 (usa a cotação mais recente)
-  assert.equal(c.j.valorCentavos, 61234);
+  assert.equal(c.j.valorCentavos, 61234); // 100 KN × 6,1234
   assert.deepEqual(c.j.cotacao, { brl: 6.1234, data: '2026-10-27' });
-  assert.ok(c.j.pix.copiaECola);
-  const cobranca = simulado.chamadas.find((x) => x.url === '/v3/payments').corpo;
-  assert.equal(cobranca.value, 612.34);
-  assert.equal(cobranca.externalReference, c.j.id);
-  const pedido = repo.tabelas.pedidos[c.j.id];
-  assert.equal(pedido.moeda_exibida, 'USD');
-  assert.equal(pedido.cotacao_exibida, 1.12);
+  assert.deepEqual(c.j.divisao, { vendedorCentavos: 30617, plataformaCentavos: 30617 });
+  assert.match(c.j.pix.copiaECola, /^PIX-SIMULADO-/);
+
+  const p = pedidoDe(c.j.id);
+  assert.deepEqual(
+    [p.valor_kn, p.valor_centavos, p.cotacao_brl, p.cotacao_data, p.taxa_percentual, p.vendedor_centavos, p.plataforma_centavos, p.provedor, p.status, p.repasse_status],
+    [100, 61234, 6.1234, '2026-10-27', 50, 30617, 30617, 'simulado', 'aguardando_pagamento', 'aguardando'],
+  );
+  assert.equal(p.moeda_exibida, 'USD');
+  assert.equal(p.cotacao_exibida, 1.12);
+  assert.ok(p.cobranca_id && p.pix_copia_cola);
 
   // vendedor não pode entregar antes do pagamento
   assert.equal((await api('POST', `/api/pedidos/${c.j.id}/entregue`, null, 'tok-vendedor')).s, 409);
 
-  // aviso com senha errada é recusado
-  assert.equal((await api('POST', '/api/webhooks/asaas', { event: 'PAYMENT_RECEIVED', payment: { id: pedido.asaas_cobranca_id } }, null, { 'asaas-access-token': 'x' })).s, 401);
+  const aviso = pagamentos.simulador.gerarAviso(p.cobranca_id, 'pago');
+  // aviso sem assinatura, com assinatura errada ou com o conteúdo alterado: recusado
+  assert.equal((await entregar({ corpoBruto: aviso.corpoBruto, cabecalhos: {} })).s, 401);
+  assert.equal((await entregar({ corpoBruto: aviso.corpoBruto, cabecalhos: { 'x-simulado-assinatura': 'f'.repeat(64) } })).s, 401);
+  const alterado = Buffer.from(aviso.corpoBruto.toString().replace('"pago"', '"devolvido"'));
+  assert.equal((await entregar({ corpoBruto: alterado, cabecalhos: aviso.cabecalhos })).s, 401);
+  assert.equal(pedidoDe(c.j.id).status, 'aguardando_pagamento');
 
-  // dinheiro caiu: líquido R$ 611,35 → vendedor 305,68 / Kennismarket 305,67
-  const ev = { id: 'evt1', event: 'PAYMENT_RECEIVED', payment: { id: pedido.asaas_cobranca_id, netValue: 611.35 } };
-  assert.equal((await aviso(ev)).s, 200);
-  const p = repo.tabelas.pedidos[c.j.id];
-  assert.equal(p.status, 'pago');
-  assert.equal(p.repasse_status, 'enviado');
-  assert.equal(p.vendedor_centavos, 30568);
-  assert.equal(p.plataforma_centavos, 30567);
-  const tr = transferencias().at(-1).corpo;
-  assert.deepEqual({ v: tr.value, k: tr.pixAddressKey, t: tr.pixAddressKeyType }, { v: 305.68, k: 'ana@x.com', t: 'EMAIL' });
-
-  // o mesmo aviso repetido não paga de novo
-  assert.equal((await aviso(ev)).j.duplicado, true);
-  // aviso diferente sobre o mesmo pagamento também não paga de novo
-  await aviso({ ...ev, id: 'evt1-b' });
-  assert.equal(transferencias().length, 1);
-
-  // Asaas confirma a transferência
-  await aviso({ id: 'evt2', event: 'TRANSFER_DONE', transfer: { id: p.repasse_id } });
-  assert.equal(repo.tabelas.pedidos[c.j.id].repasse_status, 'concluido');
+  // aviso verdadeiro: pago, e a parte da vendedora já repassada
+  const r = await entregar(aviso);
+  assert.equal(r.s, 200);
+  assert.equal(pedidoDe(c.j.id).status, 'pago');
+  assert.equal(pedidoDe(c.j.id).repasse_status, 'repassado');
+  // o mesmo aviso de novo não é processado duas vezes
+  assert.equal((await entregar(aviso)).j.eventos[0].duplicado, true);
 
   // entrega e confirmação do cliente
   assert.equal((await api('POST', `/api/pedidos/${c.j.id}/entregue`, null, 'tok-outro')).s, 404);
@@ -98,118 +135,138 @@ test('Pix: KN vira reais pela cotação do euro, e o vendedor recebe 50% do líq
   assert.equal((await api('POST', `/api/pedidos/${c.j.id}/recebido`, null, 'tok-cliente')).j.status, 'concluido');
 });
 
-test('cartão: atende ao aprovar, mas só paga o vendedor quando o dinheiro cai', async () => {
-  const c = await comprar('CREDIT_CARD');
-  const id = repo.tabelas.pedidos[c.j.id].asaas_cobranca_id;
-  const antes = transferencias().length;
-  await aviso({ id: 'evt3', event: 'PAYMENT_CONFIRMED', payment: { id, netValue: 590 } });
-  assert.equal(repo.tabelas.pedidos[c.j.id].status, 'pago');
-  assert.equal(repo.tabelas.pedidos[c.j.id].repasse_status, 'aguardando_dinheiro');
-  assert.equal(transferencias().length, antes);
-  await aviso({ id: 'evt4', event: 'PAYMENT_RECEIVED', payment: { id, netValue: 590 } });
-  assert.equal(repo.tabelas.pedidos[c.j.id].repasse_status, 'enviado');
-  assert.equal(transferencias().at(-1).corpo.value, 295);
+test('boleto: devolve a linha digitável', async () => {
+  const c = await comprar('boleto');
+  assert.equal(c.s, 201);
+  assert.ok(c.j.boleto.linhaDigitavel);
+  assert.equal(pedidoDe(c.j.id).forma_pagamento, 'boleto');
 });
 
-test('repasse recusado pelo Asaas: tarefa de hora em hora tenta de novo', async () => {
+async function compraPaga() {
   const c = await comprar();
-  const id = repo.tabelas.pedidos[c.j.id].asaas_cobranca_id;
-  simulado.falhas['/v3/transfers'] = { status: 400 };
-  await aviso({ id: 'evt5', event: 'PAYMENT_RECEIVED', payment: { id, netValue: 100 } });
-  assert.equal(repo.tabelas.pedidos[c.j.id].repasse_status, 'falhou');
-  delete simulado.falhas['/v3/transfers'];
+  await entregar(pagamentos.simulador.gerarAviso(pedidoDe(c.j.id).cobranca_id, 'pago'));
+  return c.j.id;
+}
 
-  assert.equal((await api('POST', '/api/tarefas/repasses', null, null, { 'x-tarefas-token': 'errado' })).s, 401);
-  const r = await api('POST', '/api/tarefas/repasses', null, null, { 'x-tarefas-token': 'tarefas' });
-  assert.deepEqual(r.j.enviados, [c.j.id]);
-  assert.equal(repo.tabelas.pedidos[c.j.id].repasse_status, 'enviado');
-  assert.equal(repo.tabelas.pedidos[c.j.id].repasse_tentativas, 2);
-
-  // Asaas avisa depois que a transferência falhou: volta para a fila
-  await aviso({ id: 'evt6', event: 'TRANSFER_FAILED', transfer: { id: repo.tabelas.pedidos[c.j.id].repasse_id } });
-  assert.equal(repo.tabelas.pedidos[c.j.id].repasse_status, 'falhou');
-});
-
-test('resposta do Asaas perdida: o repasse trava para conferência e nunca paga duas vezes', async () => {
-  const c = await comprar();
-  const id = repo.tabelas.pedidos[c.j.id].asaas_cobranca_id;
-  simulado.falhas['/v3/transfers'] = 'cair';
-  await aviso({ id: 'evt7', event: 'PAYMENT_RECEIVED', payment: { id, netValue: 100 } });
-  delete simulado.falhas['/v3/transfers'];
-  const p = repo.tabelas.pedidos[c.j.id];
-  assert.equal(p.repasse_status, 'enviando');
-  assert.match(p.repasse_erro, /CONFERIR NO ASAAS/);
-
-  // a tarefa automática não mexe nele
-  const r = await api('POST', '/api/tarefas/repasses', null, null, { 'x-tarefas-token': 'tarefas' });
-  assert.ok(!r.j.enviados.includes(c.j.id));
-  // só o dono destrava, depois de conferir
-  assert.equal((await api('POST', `/api/admin/pedidos/${c.j.id}/repasse`, { acao: 'marcar_enviado', repasseId: 'tra_x' }, 'tok-vendedor')).s, 403);
-  const ok = await api('POST', `/api/admin/pedidos/${c.j.id}/repasse`, { acao: 'marcar_enviado', repasseId: 'tra_x' }, 'tok-dono');
-  assert.equal(ok.j.repasse_status, 'enviado');
-});
-
-test('reembolso: cliente pede, suporte decide, devolve em dinheiro', async () => {
-  const c = await comprar();
-  const cobranca = repo.tabelas.pedidos[c.j.id].asaas_cobranca_id;
-  await aviso({ id: 'evt8', event: 'PAYMENT_RECEIVED', payment: { id: cobranca, netValue: 600 } });
-
-  assert.equal((await api('POST', `/api/pedidos/${c.j.id}/reembolso`, { motivo: '' }, 'tok-cliente')).s, 400);
-  const rb = await api('POST', `/api/pedidos/${c.j.id}/reembolso`, { motivo: 'não condiz com o portfólio' }, 'tok-cliente');
+test('reembolso: cliente pede, suporte nega ou aprova; aprovado devolve em dinheiro e anota o débito da vendedora', async () => {
+  const id = await compraPaga();
+  assert.equal((await api('POST', `/api/pedidos/${id}/reembolso`, { motivo: '' }, 'tok-cliente')).s, 400);
+  const rb = await api('POST', `/api/pedidos/${id}/reembolso`, { motivo: 'não condiz com o portfólio' }, 'tok-cliente');
   assert.equal(rb.s, 201);
-  assert.equal(repo.tabelas.pedidos[c.j.id].status, 'reembolso_solicitado');
-  // não dá para pedir de novo enquanto está em análise
-  assert.equal((await api('POST', `/api/pedidos/${c.j.id}/reembolso`, { motivo: 'de novo' }, 'tok-cliente')).s, 409);
+  assert.equal(pedidoDe(id).status, 'reembolso_solicitado');
+  assert.equal((await api('POST', `/api/pedidos/${id}/reembolso`, { motivo: 'de novo' }, 'tok-cliente')).s, 409);
+  assert.equal((await api('POST', `/api/admin/reembolsos/${rb.j.id}`, { aprovar: true }, 'tok-vendedor')).s, 403);
 
-  // negado: o pedido volta para onde estava
-  assert.equal((await api('POST', `/api/admin/reembolsos/${rb.j.id}`, { aprovar: false }, 'tok-dono')).j.status, 'negado');
-  assert.equal(repo.tabelas.pedidos[c.j.id].status, 'pago');
+  // negado: volta para onde estava, sem débito
+  const neg = await api('POST', `/api/admin/reembolsos/${rb.j.id}`, { aprovar: false }, 'tok-dono');
+  assert.equal(neg.j.reembolso.status, 'negado');
+  assert.equal(pedidoDe(id).status, 'pago');
   assert.equal((await api('POST', `/api/admin/reembolsos/${rb.j.id}`, { aprovar: true }, 'tok-dono')).s, 409);
 
-  // pede de novo e é aprovado: reembolso total pelo Asaas
-  const rb2 = await api('POST', `/api/pedidos/${c.j.id}/reembolso`, { motivo: 'entrega diferente' }, 'tok-cliente');
+  // pede de novo e é aprovado: devolve tudo, e a vendedora fica devendo a parte dela
+  const rb2 = await api('POST', `/api/pedidos/${id}/reembolso`, { motivo: 'entrega diferente' }, 'tok-cliente');
   const dec = await api('POST', `/api/admin/reembolsos/${rb2.j.id}`, { aprovar: true }, 'tok-dono');
-  assert.equal(dec.j.status, 'aprovado');
-  assert.equal(repo.tabelas.pedidos[c.j.id].status, 'reembolsado');
-  const chamada = simulado.chamadas.filter((x) => x.url.endsWith('/refund')).at(-1);
-  assert.equal(chamada.url, `/v3/payments/${cobranca}/refund`);
-  assert.equal(chamada.corpo.value, undefined); // total
+  assert.equal(dec.s, 200);
+  assert.equal(dec.j.reembolso.status, 'aprovado');
+  assert.equal(dec.j.reembolso.valor_centavos, 61234);
+  assert.match(dec.j.reembolso.devolucao_id, /^dev_sim_/);
+  assert.equal(pedidoDe(id).status, 'reembolsado');
+  assert.deepEqual([dec.j.debito.valor_centavos, dec.j.debito.situacao, dec.j.debito.loja_id], [30617, 'aberto', 'loja1']);
+  // o banco simulado registrou a devolução: devolver de novo é recusado
+  assert.equal((await pagamentos.consultarStatus({ cobrancaId: pedidoDe(id).cobranca_id })).pagamento, 'devolvido');
+  const debitos = await api('GET', '/api/admin/debitos?situacao=aberto', null, 'tok-dono');
+  assert.ok(debitos.j.some((d) => d.pedido_id === id));
 });
 
-test('reembolso recusado pelo Asaas volta para análise', async () => {
-  const c = await comprar();
-  await aviso({ id: 'evt9', event: 'PAYMENT_RECEIVED', payment: { id: repo.tabelas.pedidos[c.j.id].asaas_cobranca_id, netValue: 600 } });
-  const rb = await api('POST', `/api/pedidos/${c.j.id}/reembolso`, { motivo: 'x' }, 'tok-cliente');
-  const url = `/v3/payments/${repo.tabelas.pedidos[c.j.id].asaas_cobranca_id}/refund`;
-  simulado.falhas[url] = { status: 400 };
-  assert.equal((await api('POST', `/api/admin/reembolsos/${rb.j.id}`, { aprovar: true, valorCentavos: 1000 }, 'tok-dono')).s, 400);
-  delete simulado.falhas[url];
+test('reembolso parcial: débito proporcional', async () => {
+  const id = await compraPaga();
+  const rb = await api('POST', `/api/pedidos/${id}/reembolso`, { motivo: 'parte não veio' }, 'tok-cliente');
+  assert.equal((await api('POST', `/api/admin/reembolsos/${rb.j.id}`, { aprovar: true, valorCentavos: 999999 }, 'tok-dono')).s, 400);
+  const dec = await api('POST', `/api/admin/reembolsos/${rb.j.id}`, { aprovar: true, valorCentavos: 1000 }, 'tok-dono');
+  assert.equal(dec.j.reembolso.valor_centavos, 1000);
+  assert.equal(dec.j.debito.valor_centavos, 500); // metade dos R$ 10,00 devolvidos
+});
+
+test('devolução recusada pelo banco: volta para análise e nada é anotado', async () => {
+  const id = await compraPaga();
+  const rb = await api('POST', `/api/pedidos/${id}/reembolso`, { motivo: 'x' }, 'tok-cliente');
+  const { ErroPagamento } = await import('../server/pagamentos/index.js');
+  pagamentos.simulador.falhas.devolverPagamento = new ErroPagamento('recusado', 'saldo insuficiente no teste');
+  const dec = await api('POST', `/api/admin/reembolsos/${rb.j.id}`, { aprovar: true }, 'tok-dono');
+  assert.equal(dec.s, 400);
+  assert.match(dec.j.erro, /saldo insuficiente/);
   assert.equal(repo.tabelas.reembolsos[rb.j.id].status, 'em_analise');
-  assert.equal(repo.tabelas.pedidos[c.j.id].status, 'reembolso_solicitado');
+  assert.equal(pedidoDe(id).status, 'reembolso_solicitado');
+  assert.equal((await repo.listarDebitos({ pedidoId: id })).length, 0);
 });
 
-test('loja banida não recebe repasse', async () => {
+test('cobrança cancelada no banco cancela o pedido', async () => {
   const c = await comprar();
-  repo.tabelas.lojas.loja1.banida = true;
-  await aviso({ id: 'evt10', event: 'PAYMENT_RECEIVED', payment: { id: repo.tabelas.pedidos[c.j.id].asaas_cobranca_id, netValue: 600 } });
-  repo.tabelas.lojas.loja1.banida = false;
-  assert.equal(repo.tabelas.pedidos[c.j.id].repasse_status, 'falhou');
-  assert.match(repo.tabelas.pedidos[c.j.id].repasse_erro, /banida/);
+  await entregar(pagamentos.simulador.gerarAviso(pedidoDe(c.j.id).cobranca_id, 'cancelado'));
+  assert.equal(pedidoDe(c.j.id).status, 'cancelado');
 });
 
-test('todas as chamadas ao Asaas levaram a chave', () => {
-  assert.ok(simulado.chamadas.every((c) => c.chave === 'chave-teste'));
-});
-
-test('repasse nunca sai duas vezes, nem chamado ao mesmo tempo, nem depois de enviado', async () => {
-  const { repassar } = await import('../server/lib/repasse.js');
+test('aviso perdido: o suporte pergunta ao banco (consultarStatus) e o pedido é corrigido', async () => {
   const c = await comprar();
-  const p = repo.tabelas.pedidos[c.j.id];
-  Object.assign(p, { status: 'pago', repasse_status: 'pendente', valor_liquido_centavos: 1000 });
-  const antes = transferencias().length;
-  const resultados = await Promise.allSettled([repassar(repo, p.id), repassar(repo, p.id), repassar(repo, p.id)]);
-  assert.equal(resultados.filter((r) => r.status === 'fulfilled').length, 1);
-  assert.equal(transferencias().length, antes + 1);
-  await assert.rejects(repassar(repo, p.id), /enviado/);
-  assert.equal(transferencias().length, antes + 1);
+  pagamentos.simulador.gerarAviso(pedidoDe(c.j.id).cobranca_id, 'pago'); // o banco recebeu, mas o aviso nunca chegou
+  assert.equal(pedidoDe(c.j.id).status, 'aguardando_pagamento');
+  const r = await api('POST', `/api/admin/pedidos/${c.j.id}/atualizar-status`, null, 'tok-dono');
+  assert.deepEqual(r.j.banco, { pagamento: 'pago', repasse: 'repassado' });
+  assert.equal(pedidoDe(c.j.id).status, 'pago');
+  assert.equal(pedidoDe(c.j.id).repasse_status, 'repassado');
+});
+
+test('página de teste: fluxo inteiro só com os endereços dela e os do site', async () => {
+  const pg = await api('GET', '/teste/pagamentos');
+  assert.equal(pg.s, 200);
+  assert.match(pg.texto, /text\/html/);
+  const d = await api('POST', '/api/teste/preparar');
+  assert.equal(d.s, 200);
+  assert.deepEqual(d.j.formas, ['pix', 'boleto']);
+  const { cliente, dono } = d.j.tokens;
+  const c = await api('POST', '/api/pedidos', { produtoId: d.j.produtoId, formaPagamento: 'pix', cpfCnpj: CPF_CLIENTE }, cliente);
+  assert.equal(c.s, 201);
+  assert.equal((await api('POST', '/api/teste/simular', { pedidoId: c.j.id, tipo: 'pago' })).s, 200);
+  assert.equal(pedidoDe(c.j.id).repasse_status, 'repassado');
+  const rb = await api('POST', `/api/pedidos/${c.j.id}/reembolso`, { motivo: 'teste' }, cliente);
+  const dec = await api('POST', `/api/admin/reembolsos/${rb.j.id}`, { aprovar: true }, dono);
+  assert.equal(dec.j.debito.valor_centavos, c.j.divisao.vendedorCentavos);
+  assert.equal((await api('GET', `/api/teste/debitos/${c.j.id}`)).j.length, 1);
+});
+
+test('com a Transfeera: página de teste some, contas de teste param, e o que falta da documentação responde 501', async () => {
+  const r2 = criarRepoMemoria();
+  popular(r2);
+  const pT = criarPagamentos(cfg('transfeera'));
+  const { s, url } = await subir(r2, pT);
+  try {
+    // dados de teste criados enquanto era simulado não servem com banco real
+    const tokTeste = 'tok-teste-dono-x';
+    r2.tabelas.usuarios[tokTeste] = { id: 'u-t', email: 'dono@teste.kennismarket.invalid', nome: 'T', papel: 'dono' };
+    assert.equal((await api('GET', '/teste/pagamentos', null, null, { url })).s, 404);
+    assert.equal((await api('POST', '/api/teste/preparar', null, null, { url })).s, 404);
+    assert.equal((await api('GET', '/api/admin/debitos', null, tokTeste, { url })).s, 403);
+
+    const saude = await api('GET', '/api/saude', null, null, { url });
+    assert.deepEqual(saude.j.pagamentos, { provedor: 'transfeera', formas: ['pix', 'boleto'], ambiente: 'sandbox', credenciais: 'NÃO PREENCHIDAS', implementado: false });
+
+    // cadastro do vendedor depende da documentação
+    const cad = await api('PUT', '/api/loja/recebimento', { nome: 'Ana', cpfCnpj: CPF_VENDEDORA, pix: { chave: 'a@x.com', tipo: 'email' } }, 'tok-vendedor', { url });
+    assert.equal(cad.s, 501);
+    assert.match(cad.j.erro, /Transfeera.*documentação/);
+
+    // recebedor confirmado com o simulado precisa ser confirmado de novo com a Transfeera
+    r2.tabelas.dadosRecebimento.loja1 = { loja_id: 'loja1', nome: 'Ana', cpf_cnpj: CPF_VENDEDORA, pix_chave: 'a@x.com', pix_tipo: 'email', provedor: 'simulado', situacao: 'pronto' };
+    assert.equal((await api('POST', '/api/pedidos', { produtoId: 'prod1', formaPagamento: 'pix', cpfCnpj: CPF_CLIENTE }, 'tok-cliente', { url })).s, 409);
+    // com recebedor da Transfeera, a cobrança esbarra na documentação e o pedido é cancelado
+    r2.tabelas.dadosRecebimento.loja1.provedor = 'transfeera';
+    const c = await api('POST', '/api/pedidos', { produtoId: 'prod1', formaPagamento: 'pix', cpfCnpj: CPF_CLIENTE }, 'tok-cliente', { url });
+    assert.equal(c.s, 501);
+    assert.ok(Object.values(r2.tabelas.pedidos).every((p) => p.status === 'cancelado'));
+
+    // aviso enquanto o provedor não está pronto: o banco deve tentar de novo depois
+    assert.equal((await api('POST', '/api/webhooks/pagamento', null, null, { url, bruto: '{}' })).s, 503);
+  } finally {
+    s.close();
+  }
 });

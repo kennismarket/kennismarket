@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Teste de pagamentos</title>
+  <link rel="icon" href="/img/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); }
+    main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 16px; }
+    h1 { font: 700 26px var(--f-display); margin: 0; }
+    h2 { font: 700 17px var(--f-display); margin: 0 0 8px; }
+    p { margin: 0; }
+    .aviso { border-left: 3px solid var(--warn); background: var(--surface); padding: 10px 14px; border-radius: 8px; color: var(--muted); }
+    .passo { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 10px; }
+    .passo[aria-disabled="true"] { opacity: .5; }
+    .linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    button { font: 600 15px var(--f-body); padding: 10px 16px; border-radius: 10px; border: 1.5px solid var(--primary); background: var(--primary); color: var(--on-primary); cursor: pointer; }
+    button.sec { background: var(--surface); color: var(--ink); border-color: var(--line); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    select, input { font: inherit; padding: 9px 10px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); min-width: 0; }
+    input { flex: 1 1 220px; }
+    .res { font-size: 14px; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
+    .res.erro { color: var(--danger); }
+    .res.ok { color: var(--safe); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    td { padding: 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    td:first-child { color: var(--muted); width: 45%; padding-right: 12px; }
+    td:last-child { font-family: var(--f-mono); word-break: break-all; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Teste de pagamentos</h1>
+  <p class="aviso">Banco <b>simulado</b>: nenhum dinheiro de verdade. Esta página só existe enquanto o site usa o provedor simulado
+    (PAYMENT_PROVIDER=simulado). Os dados criados aqui (contas, loja e produto de teste) são inventados.</p>
+
+  <section class="passo" id="p1">
+    <h2>1. Preparar os dados de teste</h2>
+    <p>Cria uma cliente, uma vendedora e um dono de teste, uma loja com um produto de 100 KN e os dados de recebimento da vendedora (chave Pix).</p>
+    <div class="linha"><button data-acao="preparar">Preparar</button></div>
+    <p class="res" data-res="preparar"></p>
+  </section>
+
+  <section class="passo" id="p2" aria-disabled="true">
+    <h2>2. Comprar (como cliente)</h2>
+    <div class="linha">
+      <label for="forma">Forma de pagamento</label>
+      <select id="forma"></select>
+      <button data-acao="comprar" disabled>Comprar o produto</button>
+    </div>
+    <p class="res" data-res="comprar"></p>
+  </section>
+
+  <section class="passo" id="p3" aria-disabled="true">
+    <h2>3. O banco avisa que o cliente pagou</h2>
+    <p>Simula o aviso assinado que o banco manda. A parte da vendedora sai junto (split instantâneo).</p>
+    <div class="linha"><button data-acao="pagar" disabled>Simular pagamento</button></div>
+    <p class="res" data-res="pagar"></p>
+  </section>
+
+  <section class="passo" id="p4" aria-disabled="true">
+    <h2>4. Reembolso</h2>
+    <div class="linha">
+      <input id="motivo" value="O que chegou não condiz com o que a loja mostrava." aria-label="Motivo do reembolso">
+      <button data-acao="pedirReembolso" disabled>Cliente pede reembolso</button>
+    </div>
+    <div class="linha">
+      <button data-acao="aprovar" disabled>Suporte aprova</button>
+      <button class="sec" data-acao="negar" disabled>Suporte nega</button>
+    </div>
+    <p class="res" data-res="reembolso"></p>
+  </section>
+
+  <section class="passo" id="quadro" aria-disabled="true">
+    <h2>Situação do pedido</h2>
+    <table><tbody id="tabela"><tr><td>Pedido</td><td>nenhum ainda</td></tr></tbody></table>
+  </section>
+</main>
+<script type="module">
+  const estado = { tokens: null, produtoId: null, pedidoId: null, reembolsoId: null };
+  const $ = (s) => document.querySelector(s);
+  const reais = (c) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const cotacao = (v) => `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
+  const dia = (d) => d.split('-').reverse().join('/');
+  const NOMES = {
+    aguardando_pagamento: 'aguardando pagamento', pago: 'pago', entregue: 'entregue', concluido: 'concluído',
+    reembolso_solicitado: 'reembolso solicitado (suporte analisando)', reembolsado: 'reembolsado', cancelado: 'cancelado',
+    aguardando: 'aguardando o pagamento', processando: 'processando', repassado: 'repassado à vendedora', falhou: 'falhou',
+  };
+
+  async function chamar(metodo, url, corpo, papel) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (papel) headers.authorization = `Bearer ${estado.tokens[papel]}`;
+    const r = await fetch(url, { method: metodo, headers, body: corpo ? JSON.stringify(corpo) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.erro || `HTTP ${r.status}`);
+    return j;
+  }
+  function mostrar(chave, texto, tipo = '') {
+    const el = $(`[data-res="${chave}"]`);
+    el.textContent = texto;
+    el.className = `res ${tipo}`;
+  }
+  function liberar(id, sim = true) { $(id).setAttribute('aria-disabled', String(!sim)); }
+  function botao(acao, sim) { $(`[data-acao="${acao}"]`).disabled = !sim; }
+
+  async function atualizarQuadro() {
+    if (!estado.pedidoId) return;
+    const p = await chamar('GET', `/api/pedidos/${estado.pedidoId}`, null, 'cliente');
+    const debitos = await chamar('GET', `/api/teste/debitos/${estado.pedidoId}`);
+    const linhas = [
+      ['Situação do pagamento', NOMES[p.status] || p.status],
+      ['Situação do repasse', NOMES[p.repasse_status] || p.repasse_status],
+      ['Valor em KN', `${p.valor_kn} KN`],
+      ['Valor em reais', reais(p.valor_centavos)],
+      ['Cotação usada (1 euro)', `${cotacao(p.cotacao_brl)} em ${dia(p.cotacao_data)}`],
+      ['Parte da vendedora (50%)', reais(p.vendedor_centavos)],
+      ['Parte do Kennismarket (50%)', reais(p.plataforma_centavos)],
+      ['Forma de pagamento', p.forma_pagamento],
+      ['Código da cobrança', p.cobranca_id || '—'],
+      ['Débito anotado da vendedora', debitos.length ? debitos.map((d) => `${reais(d.valor_centavos)} (${d.situacao})`).join(', ') : 'nenhum'],
+    ];
+    $('#tabela').innerHTML = '';
+    for (const [a, b] of linhas) {
+      const tr = document.createElement('tr');
+      tr.append(Object.assign(document.createElement('td'), { textContent: a }), Object.assign(document.createElement('td'), { textContent: b }));
+      $('#tabela').append(tr);
+    }
+    liberar('#quadro');
+    return p;
+  }
+
+  const acoes = {
+    async preparar() {
+      mostrar('preparar', 'Preparando… (o servidor pode levar até 1 minuto para acordar)');
+      const d = await chamar('POST', '/api/teste/preparar');
+      Object.assign(estado, { tokens: d.tokens, produtoId: d.produtoId });
+      $('#forma').innerHTML = d.formas.map((f) => `<option value="${f}">${{ pix: 'Pix', boleto: 'Boleto', cartao: 'Cartão' }[f] || f}</option>`).join('');
+      mostrar('preparar', `Pronto. Cotação do euro: ${cotacao(d.cotacao.brl)} (${dia(d.cotacao.data)}). Produto: 100 KN.`, 'ok');
+      liberar('#p2'); botao('comprar', true);
+    },
+    async comprar() {
+      const c = await chamar('POST', '/api/pedidos', { produtoId: estado.produtoId, formaPagamento: $('#forma').value, cpfCnpj: '111.444.777-35' }, 'cliente');
+      estado.pedidoId = c.id; estado.reembolsoId = null;
+      const como = c.pix ? `Pix copia e cola (de mentira): ${c.pix.copiaECola}` : c.boleto ? `Linha digitável (de mentira): ${c.boleto.linhaDigitavel}` : `Link: ${c.linkPagamento}`;
+      mostrar('comprar', `Cobrança criada: ${reais(c.valorCentavos)}. Vendedora ${reais(c.divisao.vendedorCentavos)} + Kennismarket ${reais(c.divisao.plataformaCentavos)}.\n${como}`, 'ok');
+      liberar('#p3'); botao('pagar', true);
+      liberar('#p4', false); ['pedirReembolso', 'aprovar', 'negar'].forEach((a) => botao(a, false)); mostrar('reembolso', '');
+      mostrar('pagar', '');
+      await atualizarQuadro();
+    },
+    async pagar() {
+      await chamar('POST', '/api/teste/simular', { pedidoId: estado.pedidoId, tipo: 'pago' });
+      const p = await atualizarQuadro();
+      mostrar('pagar', `Pagamento confirmado. Repasse: ${NOMES[p.repasse_status]}.`, 'ok');
+      botao('pagar', false); liberar('#p4'); botao('pedirReembolso', true);
+    },
+    async pedirReembolso() {
+      const r = await chamar('POST', `/api/pedidos/${estado.pedidoId}/reembolso`, { motivo: $('#motivo').value }, 'cliente');
+      estado.reembolsoId = r.id;
+      mostrar('reembolso', 'Pedido de reembolso enviado. Agora o suporte decide.', 'ok');
+      botao('pedirReembolso', false); botao('aprovar', true); botao('negar', true);
+      await atualizarQuadro();
+    },
+    async aprovar() {
+      const r = await chamar('POST', `/api/admin/reembolsos/${estado.reembolsoId}`, { aprovar: true }, 'dono');
+      mostrar('reembolso', `Reembolso aprovado: ${reais(r.reembolso.valor_centavos)} devolvidos ao cliente (do caixa do Kennismarket).`
+        + (r.debito ? `\nDébito anotado da vendedora: ${reais(r.debito.valor_centavos)}.` : '') + (r.aviso ? `\n⚠️ ${r.aviso}` : ''), 'ok');
+      botao('aprovar', false); botao('negar', false);
+      await atualizarQuadro();
+    },
+    async negar() {
+      await chamar('POST', `/api/admin/reembolsos/${estado.reembolsoId}`, { aprovar: false }, 'dono');
+      mostrar('reembolso', 'Reembolso negado. O pedido voltou para onde estava.', 'ok');
+      botao('aprovar', false); botao('negar', false); botao('pedirReembolso', true);
+      await atualizarQuadro();
+    },
+  };
+
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-acao]');
+    if (!b || b.disabled) return;
+    const chave = { pedirReembolso: 'reembolso', aprovar: 'reembolso', negar: 'reembolso' }[b.dataset.acao] || b.dataset.acao;
+    b.disabled = true;
+    try { await acoes[b.dataset.acao](); }
+    catch (err) { mostrar(chave, `Erro: ${err.message}`, 'erro'); b.disabled = false; }
+  });
+</script>
+</body>
+</html>

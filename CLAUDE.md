@@ -21,25 +21,36 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 - A confiança é o ponto central do produto.
 
 ## Mercado, idioma e moeda
-- Público e vendedores: **Brasil**. Cobrança em **reais (R$)** via **Asaas**.
+- Público e vendedores: **Brasil**. Cobrança em **reais (R$)** via **Transfeera**.
 - Interface: o site **abre sempre em holandês** pra qualquer visitante, com tradução opcional para inglês, espanhol e português. Isso é decisão confirmada dos donos, mesmo com o público sendo brasileiro: o seletor de idioma tem que ser fácil de achar.
 - Moeda interna: **KN Coins** (símbolo K, abreviação KN). **1 KN = 1 euro**: o preço em reais acompanha a cotação diária do euro (Banco Central Europeu), congelada no pedido no momento da compra.
   - KN Coins **só podem ser comprados dentro da loja, no valor exato do pedido**. Não existe compra avulsa de moedas.
   - O cliente só é atendido com o pedido já pago.
 
 ## Pagamentos e dinheiro
-- Processador: **Asaas**, em conta no CPF de um dos donos (ainda sem CNPJ). O plano é abrir o CNPJ (Kennismarket Ltda) com o dinheiro das primeiras vendas.
-- O nome pessoal do dono não deve aparecer pros compradores no Pix (privacidade).
-- Divisão de cada venda: **50/50 em todas as vendas**, sobre o valor líquido (depois da taxa do Asaas).
-- **O vendedor recebe antes da confirmação do cliente**: assim que o dinheiro cai na conta do Kennismarket, a metade dele vai por Pix para a chave dele (sem subconta, porque a conta ainda é CPF). No cartão, isso só acontece quando o Asaas libera o dinheiro (~30 dias).
-- Se houver golpe, os donos resolvem direto com o cliente e **banem o vendedor** (loja banida não recebe repasses).
+- Processador: **Transfeera**. O Kennismarket abre já com **CNPJ** (Kennismarket Ltda), então o Pix mostra o nome da empresa, nunca o dos donos.
+- **Split instantâneo** por Pix e boleto: a divisão vai na própria cobrança (QR Code/boleto). A parte do vendedor é repassada **na hora**, junto com o pagamento. **Não existe retenção** de dinheiro.
+- O vendedor **não precisa de conta na Transfeera**: recebe pelo CPF/CNPJ + chave Pix ou dados bancários (campos exatos a confirmar na documentação).
+- Divisão: **50/50 em todas as vendas**, sobre o **valor cheio** cobrado do cliente. A taxa da Transfeera sai da parte do Kennismarket (confirmar na documentação como configurar).
+- **Cartão de crédito**: ainda não confirmado. O código está preparado, mas **desligado** (`PAYMENT_CARD_ENABLED=false`).
+- Se houver golpe, os donos resolvem direto com o cliente e **banem o vendedor** (loja banida não vende).
 - **Links de convite**: só os donos criam, e eles são enviados por e-mail pra vendedores/afiliados criarem a loja.
 - **Garantia ao vendedor**: se o cliente receber e não pagar, o Kennismarket paga o vendedor e trata o caso juridicamente.
+
+### Módulo de pagamento (regra de arquitetura)
+- Toda a comunicação com o banco fica **só** em `server/pagamentos/`. O resto do site (checkout, pedidos, painel do vendedor, reembolsos, admin) **nunca** fala direto com o banco: usa só `criarCobranca`, `confirmarPagamento`, `cadastrarRecebedor`, `consultarStatus` e `devolverPagamento`, no formato de `server/pagamentos/contrato.js`. Um teste automático (`tests/isolamento.test.js`) falha se isso for quebrado.
+- O banco é escolhido por `PAYMENT_PROVIDER`: `simulado` (testes, sem dinheiro, com a página `/teste/pagamentos`) ou `transfeera`. Trocar de banco = escrever um provedor novo, sem mexer no resto do site.
+- **Sandbox da Transfeera** até os donos autorizarem o modo real (`TRANSFEERA_AMBIENTE=sandbox` / `producao`).
+- **Documentação da Transfeera ainda não chegou.** Até lá, **não inventar** endpoints, nomes de campos nem formatos da API: o provedor `transfeera` é só um esqueleto que responde "pendente" (HTTP 501), com o que falta marcado no código. Os nomes das variáveis `TRANSFEERA_*` são provisórios.
+- Quando chegar a documentação: implementar o provedor real, ajustar os campos do cadastro do vendedor e testar no sandbox o caminho completo (compra → pagamento → split instantâneo → reembolso pelo suporte → débito do vendedor anotado).
+- O aviso de pagamento (webhook, `/api/webhooks/pagamento`) só é aceito se o módulo confirmar que veio do banco, e nunca é processado duas vezes.
+- Todo pedido guarda: valor em KN, valor em reais, cotação usada e data, porcentagem, parte do vendedor, parte do Kennismarket, situação do pagamento e do repasse.
 
 ## Reembolsos
 - **Nunca automáticos.** O cliente clica em "Solicitar reembolso", e o suporte analisa caso a caso (pra evitar golpe contra vendedor).
 - O botão só aparece/libera quando o cliente pede.
 - Reembolso **sempre em dinheiro**, nunca em KN Coins. Como o vendedor já recebeu, o dinheiro do reembolso sai do caixa do Kennismarket.
+- Ao aprovar um reembolso, o site **anota o débito do vendedor** (a parte dele, proporcional ao valor devolvido). É **só um registro**: a cobrança é feita por fora pelos donos.
 - Depois de receber o pedido, só tem reembolso se o que chegou não condiz com o pedido ou com o que a loja mostrava (conta/portfólio).
 
 ## Marca
@@ -51,9 +62,9 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 ## Stack técnica (decidida)
 - **Node.js**, com o código no **GitHub**.
 - **Supabase** pra login, banco de dados e armazenamento de arquivos.
-- **Asaas** pra pagamentos. Usar o **modo sandbox** até os donos autorizarem o dinheiro real.
+- **Transfeera** pra pagamentos (ver "Módulo de pagamento"). Usar o **sandbox** até os donos autorizarem o dinheiro real.
 - Hospedagem: **versão de testes no Render** (plano grátis, `render.yaml`). Depois, **Hostinger** (Node.js gerenciada, com deploy pelo GitHub).
-- Tarefas agendadas (cotação diária, nova tentativa de repasses) rodam pelo **GitHub Actions** (`.github/workflows/tarefas.yml`), porque servidor grátis dorme.
+- Tarefa agendada (cotação diária do euro) roda pelo **GitHub Actions** (`.github/workflows/tarefas.yml`), porque servidor grátis dorme.
 - Nada de dados guardados em arquivo no servidor: tudo no Supabase.
 - **Banco de dados:** o Supabase está ligado ao GitHub com **Deploy to production**: cada arquivo novo em `supabase/migrations/` é aplicado sozinho quando entra na `main`. Por isso:
   - nunca editar um arquivo de migração que já entrou na `main`; toda mudança vai num arquivo novo, com número maior (`0002_...sql`, `0003_...sql`);
@@ -65,7 +76,7 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 ## Prioridades da primeira versão
 1. Cadastro/login de clientes e vendedores
 2. Lojas e cadastro de produtos/serviços
-3. Checkout com Asaas (sandbox) e repasse 50/50 por Pix
+3. Checkout com a Transfeera (sandbox) e split instantâneo 50/50
 4. Pedidos, entrega e solicitação de reembolso
 5. Chat simples entre cliente e vendedor
 6. Painel do vendedor com o valor a receber

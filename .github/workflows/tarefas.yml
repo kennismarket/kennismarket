@@ -13,13 +13,12 @@ name: Tarefas agendadas
 on:
   schedule:
     - cron: '30 16 * * *' # cotações: todo dia, depois que o Banco Central Europeu publica
-    - cron: '7 * * * *'   # repasses: de hora em hora, tenta de novo os que falharam
   workflow_dispatch:      # botão "Run workflow" para rodar na mão
     inputs:
       tarefa:
         description: Qual tarefa rodar
         type: choice
-        options: [cotacoes, repasses]
+        options: [cotacoes]
         default: cotacoes
 
 permissions: {}
@@ -33,16 +32,13 @@ jobs:
         env:
           SITE_URL: ${{ vars.SITE_URL }}
           TAREFAS_TOKEN: ${{ secrets.TAREFAS_TOKEN }}
-          AGENDA: ${{ github.event.schedule }}
           ESCOLHIDA: ${{ inputs.tarefa }}
         run: |
           if [ -z "$SITE_URL" ] || [ -z "$TAREFAS_TOKEN" ]; then
             echo "::warning::SITE_URL ou TAREFAS_TOKEN não configurados no GitHub. Nada foi feito."
             exit 0
           fi
-          if [ -n "$ESCOLHIDA" ]; then TAREFA="$ESCOLHIDA"
-          elif [ "$AGENDA" = "30 16 * * *" ]; then TAREFA=cotacoes
-          else TAREFA=repasses; fi
+          TAREFA="${ESCOLHIDA:-cotacoes}"
           echo "Tarefa: $TAREFA"
           # O servidor pode levar ~1 minuto para acordar: tenta algumas vezes.
           # O repositório é público, então a resposta não é mostrada no log (só o código HTTP).
