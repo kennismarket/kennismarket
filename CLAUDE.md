@@ -38,7 +38,7 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 - Depois de receber o pedido, só tem reembolso se o que chegou não condiz com o pedido ou com o que a loja mostrava (conta/portfólio).
 
 ## Marca
-- Logo: **K branco com a perna inferior verde, sobre fundo azul-escuro**, sem hexágono.
+- Logo: **K branco com a perna inferior verde, sobre fundo azul-escuro**. O **logo** não leva hexágono; no resto do site, hexágonos são permitidos (ex.: fundo dos banners, como no protótipo).
 - Paleta: principal `#102A43`, base `#FFFFFF`, destaque financeiro `#16805D`, estrutura `#F3F6F9`, texto secundário `#526579`.
 - Estética: design holandês, sóbrio e em grade. Tem que funcionar perfeito no celular e no computador.
 - E-mail de suporte: kennismarket.support@protonmail.com
