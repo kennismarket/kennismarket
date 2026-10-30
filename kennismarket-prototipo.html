@@ -2149,7 +2149,7 @@ Object.assign(T.en,{
  m_caseRefund:"Kennismarket support: refund approved. {n} KN Coins are back in your balance.",
  m_caseDenied:"Kennismarket support: we reviewed the quote, the conversation and the delivery. The delivery matches what was agreed, so the refund was not approved.",
  noReviews:"No reviews yet",buyerDemo:"demo",
- accAdmin:"Owner panel (demo)",accMyStore:"My store",
+ accAdmin:"Owner panel",accMyStore:"My store",
  adminT:"Owner panel",adminD:"Create invite links for new sellers, set the revenue split and handle support cases.",adminDemo:"Demo: on the real site only Kennismarket owners can open this page, with a login and two-step verification.",
  invT:"Seller invites",invD:"Each link works once and expires in 7 days. Send it by email to the person you want to bring in.",invEmail:"Seller’s email",invBtn:"Create invite link",invErr:"Enter a valid email.",invNone:"No invites yet.",invUsed:"used",invOpen:"waiting",invExp:"expires {d}",invOpenLink:"Open link",invCreated:"Invite link created",
  splitT:"Revenue split",splitD:"Applied the moment the seller delivers. The rest stays with Kennismarket.",splitSeller:"Seller",splitPlat:"Kennismarket",splitSave:"Save split",splitSaved:"Split saved",
@@ -2187,7 +2187,7 @@ Object.assign(T.es,{
  m_caseRefund:"Soporte Kennismarket: reembolso aprobado. {n} KN Coins volvieron a tu saldo.",
  m_caseDenied:"Soporte Kennismarket: revisamos la propuesta, la conversación y la entrega. La entrega coincide con lo acordado, así que el reembolso no fue aprobado.",
  noReviews:"Aún sin reseñas",buyerDemo:"demo",
- accAdmin:"Panel del dueño (demo)",accMyStore:"Mi tienda",
+ accAdmin:"Panel del dueño",accMyStore:"Mi tienda",
  adminT:"Panel del dueño",adminD:"Crea enlaces de invitación para nuevos vendedores, define el reparto de ingresos y gestiona los casos de soporte.",adminDemo:"Demo: en el sitio real solo los dueños de Kennismarket pueden abrir esta página, con inicio de sesión y verificación en dos pasos.",
  invT:"Invitaciones de vendedores",invD:"Cada enlace funciona una vez y vence en 7 días. Envíalo por correo a la persona que quieres sumar.",invEmail:"Correo del vendedor",invBtn:"Crear enlace de invitación",invErr:"Escribe un correo válido.",invNone:"Todavía no hay invitaciones.",invUsed:"usada",invOpen:"pendiente",invExp:"vence el {d}",invOpenLink:"Abrir enlace",invCreated:"Enlace de invitación creado",
  splitT:"Reparto de ingresos",splitD:"Se aplica en el momento en que el vendedor entrega. El resto queda para Kennismarket.",splitSeller:"Vendedor",splitPlat:"Kennismarket",splitSave:"Guardar reparto",splitSaved:"Reparto guardado",
@@ -2225,7 +2225,7 @@ Object.assign(T.pt,{
  m_caseRefund:"Suporte Kennismarket: devolução aprovada. {n} KN Coins voltaram para o seu saldo.",
  m_caseDenied:"Suporte Kennismarket: analisamos a proposta, a conversa e a entrega. A entrega corresponde ao combinado, então a devolução não foi aprovada.",
  noReviews:"Ainda sem avaliações",buyerDemo:"demo",
- accAdmin:"Painel do dono (demo)",accMyStore:"Minha loja",
+ accAdmin:"Painel do dono",accMyStore:"Minha loja",
  adminT:"Painel do dono",adminD:"Crie links de convite para novos vendedores, defina a divisão do dinheiro e cuide dos chamados de suporte.",adminDemo:"Demonstração: no site real, só os donos do Kennismarket abrem esta página, com login e verificação em duas etapas.",
  invT:"Convites de vendedores",invD:"Cada link funciona uma vez e vence em 7 dias. Envie por e-mail para a pessoa que você quer trazer.",invEmail:"E-mail do vendedor",invBtn:"Criar link de convite",invErr:"Digite um e-mail válido.",invNone:"Nenhum convite ainda.",invUsed:"usado",invOpen:"aguardando",invExp:"vence em {d}",invOpenLink:"Abrir link",invCreated:"Link de convite criado",
  splitT:"Divisão do dinheiro",splitD:"Aplicada no momento em que o vendedor entrega. O restante fica com o Kennismarket.",splitSeller:"Vendedor",splitPlat:"Kennismarket",splitSave:"Salvar divisão",splitSaved:"Divisão salva",
@@ -2263,7 +2263,7 @@ Object.assign(T.nl,{
  m_caseRefund:"Kennismarket-support: terugbetaling goedgekeurd. {n} KN Coins staan weer op je saldo.",
  m_caseDenied:"Kennismarket-support: we hebben het voorstel, het gesprek en de levering bekeken. De levering komt overeen met de afspraak, dus de terugbetaling is niet goedgekeurd.",
  noReviews:"Nog geen reviews",buyerDemo:"demo",
- accAdmin:"Eigenarenpaneel (demo)",accMyStore:"Mijn winkel",
+ accAdmin:"Eigenarenpaneel",accMyStore:"Mijn winkel",
  adminT:"Eigenarenpaneel",adminD:"Maak uitnodigingslinks voor nieuwe verkopers, stel de verdeling van de opbrengst in en behandel supportzaken.",adminDemo:"Demo: op de echte site kunnen alleen de eigenaren van Kennismarket deze pagina openen, met inloggen en tweestapsverificatie.",
  invT:"Uitnodigingen voor verkopers",invD:"Elke link werkt één keer en verloopt na 7 dagen. Stuur hem per e-mail naar de persoon die je wilt toevoegen.",invEmail:"E-mail van de verkoper",invBtn:"Uitnodigingslink maken",invErr:"Vul een geldig e-mailadres in.",invNone:"Nog geen uitnodigingen.",invUsed:"gebruikt",invOpen:"open",invExp:"verloopt {d}",invOpenLink:"Link openen",invCreated:"Uitnodigingslink gemaakt",
  splitT:"Verdeling van de opbrengst",splitD:"Wordt toegepast op het moment dat de verkoper levert. De rest blijft bij Kennismarket.",splitSeller:"Verkoper",splitPlat:"Kennismarket",splitSave:"Verdeling opslaan",splitSaved:"Verdeling opgeslagen",
@@ -4443,7 +4443,6 @@ function vAdmin(){
      <div class="case-r"><b class="cv">${coin(18)}${fmtN(c.amount)}</b>${c.status==="open"?`<div class="acts"><button class="btn sm danger" data-a="caseno" data-id="${c.id}">${tr("caseDeny")}</button><button class="btn sm safe" data-a="caseyes" data-id="${c.id}">${tr("caseRefund")}</button></div>`:`<span class="pill ${c.status==="refunded"?"warn":"off"}">${c.status==="refunded"?tr("caseRefunded"):tr("caseDenied")}</span>`}</div></div>`};
   return `<div class="wrap">
     <div class="page-head"><div><span class="label">Kennismarket</span><h1 style="margin-top:6px">${tr("adminT")}</h1><p>${tr("adminD")}</p></div></div>
-    <p class="callout warn" style="margin-bottom:16px">${icon("lock",18)}<span>${tr("adminDemo")}</span></p>
     <div class="admin">
       ${adminStoresHTML()}
       <section class="panel"><h2>${tr("ledT")}</h2>
