@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { Router } from 'express';
 import { codigoDoErro, iaDisponivel, responderSuporte, validarTurnos } from '../lib/ia.js';
 import { limitePorIp } from '../lib/limite.js';
-import { erro, rota } from '../lib/seguranca.js';
+import { DOMINIO_TESTE, erro, rota } from '../lib/seguranca.js';
 
 // Recursos que o protótipo usava do claude.ai, agora guardados no Supabase:
 // - "db": coleções de documentos (lojas, arquivos de entrega, contas de vendedor);
@@ -20,7 +20,17 @@ const MAX_ESPACO = 900 * 1024 * 1024; // o plano grátis do Supabase guarda 1 GB
 export const TIPOS = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml',
   'video/mp4', 'video/webm', 'text/plain', 'text/csv', 'text/markdown', 'application/json'];
 
-export function rotasPrototipo({ repo }) {
+// Ações que só os donos fazem pela administração. O resto (lojas, arquivos de entrega,
+// usar um convite) continua aberto como no protótipo, porque o login de clientes e
+// vendedores ainda fica só no navegador.
+export function precisaDono(metodo, colecao, id, existe) {
+  if (colecao === 'stores' && id.startsWith('cfg-')) return true;                  // configuração (e-mail do suporte)
+  if (colecao === 'stores' && id.startsWith('inv-')) return metodo === 'DELETE' || !existe; // criar ou apagar convite
+  if (colecao === 'sellers' && metodo === 'DELETE') return true;                   // apagar conta de vendedor
+  return false;
+}
+
+export function rotasPrototipo({ repo, pagamentos }) {
   const api = Router();
   // "Versão" de cada coleção: muda a cada gravação, para o navegador saber quando buscar de novo.
   const versoes = Object.fromEntries(COLECOES.map((c) => [c, Date.now()]));
@@ -34,6 +44,15 @@ export function rotasPrototipo({ repo }) {
     return req.params.id;
   };
   const gravacoes = limitePorIp({ max: 300, janelaMs: 10 * 60 * 1000 });
+  const exigirDonoSe = async (req, metodo, c, id) => {
+    const existe = metodo === 'PUT' && id.startsWith('inv-') ? (await repo.listarDocsPrototipo(c)).some((d) => d.id === id) : true;
+    if (!precisaDono(metodo, c, id, existe)) return;
+    const token = (req.get('authorization') || '').replace(/^Bearer\s+/i, '');
+    const usuario = token ? await repo.usuarioPorToken(token) : null;
+    if (!usuario) throw erro(401, 'faça login como dono');
+    if (usuario.email?.endsWith(DOMINIO_TESTE) && pagamentos?.provedor !== 'simulado') throw erro(403, 'conta de teste só funciona com o provedor simulado');
+    if (usuario.papel !== 'dono') throw erro(403, 'só os donos');
+  };
 
   // Lista uma coleção. Se o navegador já tem a versão atual, responde sem os documentos.
   api.get('/colecoes/:colecao', rota(async (req, res) => {
@@ -49,6 +68,7 @@ export function rotasPrototipo({ repo }) {
     const dados = req.body?.dados;
     if (!dados || typeof dados !== 'object' || Array.isArray(dados)) throw erro(400, 'dados inválidos');
     if (JSON.stringify(dados).length > MAX_DOC) throw erro(413, 'documento grande demais');
+    await exigirDonoSe(req, 'PUT', c, id);
     await repo.salvarDocPrototipo(c, id, dados);
     mudou(c);
     res.json({ ok: true, versao: versoes[c] });
@@ -56,7 +76,9 @@ export function rotasPrototipo({ repo }) {
 
   api.delete('/docs/:colecao/:id', gravacoes, rota(async (req, res) => {
     const c = colecao(req);
-    await repo.apagarDocPrototipo(c, docId(req));
+    const id = docId(req);
+    await exigirDonoSe(req, 'DELETE', c, id);
+    await repo.apagarDocPrototipo(c, id);
     mudou(c);
     res.json({ ok: true, versao: versoes[c] });
   }));

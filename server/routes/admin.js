@@ -7,6 +7,9 @@ export function rotasAdmin({ repo, pagamentos }) {
   const r = Router();
   r.use(exigirUsuario(repo, pagamentos), exigirDono);
 
+  // Confere o login do dono (a tela de login da administração usa isto).
+  r.get('/eu', (req, res) => res.json({ email: req.usuario.email, nome: req.usuario.nome, papel: req.usuario.papel }));
+
   // Decide um pedido de reembolso. Aprovado = devolve em dinheiro, saindo do caixa do Kennismarket,
   // e anota o débito do vendedor (a parte dele que já tinha sido repassada).
   r.post('/reembolsos/:id', rota(async (req, res) => {
