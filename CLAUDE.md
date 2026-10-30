@@ -61,7 +61,7 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 - Quando os donos atualizarem o protótipo, comparar com o site e listar o que ficou diferente.
 
 ## Versão de testes (demonstração) — como funciona
-- O site mostra o **próprio** `kennismarket-prototipo.html` como página (sem cópia nem reescrita). O servidor só faz 3 ajustes de ligação na hora de entregar a página (`server/lib/pagina-prototipo.js`): carrega a ponte, troca o endereço dos links de convite e aponta as cotações para `/api/rates`.
+- O site mostra o **próprio** `kennismarket-prototipo.html` como página (sem cópia nem reescrita). O servidor só faz 4 ajustes na hora de entregar a página (`server/lib/pagina-prototipo.js`): carrega a ponte, troca o endereço dos links de convite, aponta as cotações para `/api/rates` e coloca o ícone da aba (a moeda K no hexágono, gerada pela própria função `coinSVG` do protótipo: `public/favicon.svg` e `public/favicon-32.png`).
 - O protótipo foi feito para o claude.ai e usa `window.claude.use(...)`. A **ponte** `public/js/ponte-claude.js` oferece os mesmos recursos guardando tudo no Supabase pelo servidor (`server/routes/prototipo.js`): `db` (coleções `stores`, `delivfiles`, `sellers` → tabela `prototipo_docs`), `assets` (arquivos → Storage, pasta `prototipo`, abertos em `/_blob/<id>`), `downloads` e `sample` (IA do suporte, só com `ANTHROPIC_API_KEY`).
 - Os dados do protótipo publicado no claude.ai (lojas, PDFs, contas de vendedor, convites) são levados com `scripts/importar-prototipo.mjs`.
 - O que fica só no navegador de cada visitante continua igual ao protótipo (conta logada, pedidos, carteira, chats).

@@ -26,11 +26,15 @@ const pedir = async (metodo, caminho, corpo, tipo = 'application/json') => {
   return { s: r.status, j: texto, h: r.headers };
 };
 
-test('a página do site é o protótipo, só com os três ajustes de ligação', async () => {
+test('a página do site é o protótipo, só com os ajustes de ligação e o ícone da aba', async () => {
   const r = await fetch(base + '/');
   const html = await r.text();
   assert.equal(r.status, 200);
-  assert.match(html, /^<!doctype html><html><head><script src="\/js\/ponte-claude\.js"><\/script>/);
+  assert.match(html, /^<!doctype html><html><head><link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml"><link rel="icon" href="\/favicon-32\.png" sizes="32x32" type="image\/png"><script src="\/js\/ponte-claude\.js"><\/script>/);
+  // o ícone é servido e é a moeda K do protótipo
+  const icone = await (await fetch(base + '/favicon.svg')).text();
+  assert.match(icone, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 128 128">/);
+  assert.equal((await fetch(base + '/favicon-32.png')).headers.get('content-type'), 'image/png');
   assert.match(html, /const SITE_URL=location\.origin\+"\/";/);
   assert.match(html, /var RATES_URL="\/api\/rates";/);
   assert.doesNotMatch(html, /claude\.ai\/artifact/);
