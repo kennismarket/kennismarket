@@ -45,7 +45,7 @@ test('a página do site é o protótipo, só com os ajustes de ligação e o íc
 
 test('se o protótipo mudar, os ajustes que não acharem o trecho aparecem na lista', () => {
   const { faltando } = montarPaginaPrototipo('<html><head></head><body></body></html>');
-  assert.deepEqual(faltando, ['links de convite', 'cotações']);
+  assert.deepEqual(faltando, ['links de convite', 'cotações', 'administração só para donos', 'editor de lojas só para donos']);
 });
 
 test('db: coleções com versão, gravar e apagar documentos', async () => {
@@ -123,4 +123,55 @@ test('importação: envia os arquivos, troca os ids nos documentos e grava as tr
   } finally {
     rmSync(pasta, { recursive: true, force: true });
   }
+});
+
+test('administração: a página só abre com login de dono', async () => {
+  const html = await (await fetch(base + '/')).text();
+  assert.match(html, /<script src="\/js\/admin-dono\.js"><\/script>/);
+  assert.match(html, /function vAdmin\(\)\{if\(!window\.KM_DONO\)return kmLoginDono\(\);/);
+  assert.match(html, /function vEditStore\(\)\{if\(!window\.KM_DONO\)return kmLoginDono\(\);/);
+  assert.match(await (await fetch(base + '/js/admin-dono.js')).text(), /kmLoginDono/);
+});
+
+test('administração: /api/admin/eu só responde para o dono', async () => {
+  const { tokens } = await repo.prepararDadosTeste();
+  const eu = (token) => fetch(base + '/api/admin/eu', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  assert.equal((await eu()).status, 401);
+  assert.equal((await eu(tokens.vendedor)).status, 403);
+  const r = await eu(tokens.dono);
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).papel, 'dono');
+});
+
+test('db: criar e apagar convites, configuração e apagar vendedores exigem dono', async () => {
+  const { tokens } = await repo.prepararDadosTeste();
+  const gravar = (metodo, caminho, dados, token) => fetch(base + '/api/prototipo/docs/' + caminho, {
+    method: metodo,
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: dados ? JSON.stringify({ dados }) : undefined,
+  });
+  const convite = { invite: { token: 'abc12345', email: 'v@ex.nl', used: false } };
+
+  // criar convite: só o dono
+  assert.equal((await gravar('PUT', 'stores/inv-abc12345', convite)).status, 401);
+  assert.equal((await gravar('PUT', 'stores/inv-abc12345', convite, tokens.cliente)).status, 403);
+  assert.equal((await gravar('PUT', 'stores/inv-abc12345', convite, tokens.dono)).status, 200);
+  // usar o convite (marcar como usado) continua aberto: o vendedor ainda não tem login no site
+  assert.equal((await gravar('PUT', 'stores/inv-abc12345', { invite: { ...convite.invite, used: true } })).status, 200);
+  // apagar convite: só o dono
+  assert.equal((await gravar('DELETE', 'stores/inv-abc12345')).status, 401);
+  assert.equal((await gravar('DELETE', 'stores/inv-abc12345', null, tokens.dono)).status, 200);
+
+  // configuração do suporte: só o dono
+  assert.equal((await gravar('PUT', 'stores/cfg-support', { cfg: { supportEmail: 'x@ex.nl' } })).status, 401);
+  assert.equal((await gravar('PUT', 'stores/cfg-support', { cfg: { supportEmail: 'x@ex.nl' } }, tokens.dono)).status, 200);
+
+  // contas de vendedor: criar continua aberto (pelo convite); apagar, só o dono
+  assert.equal((await gravar('PUT', 'sellers/acc-abc12345', { acc: { username: 'v' } })).status, 200);
+  assert.equal((await gravar('DELETE', 'sellers/acc-abc12345', null, tokens.vendedor)).status, 403);
+  assert.equal((await gravar('DELETE', 'sellers/acc-abc12345', null, tokens.dono)).status, 200);
+
+  // lojas continuam abertas como no protótipo
+  assert.equal((await gravar('PUT', 'stores/s4242', { store: { id: 4242 } })).status, 200);
+  assert.equal((await gravar('DELETE', 'stores/s4242')).status, 200);
 });

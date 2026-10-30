@@ -21,6 +21,12 @@
   }
 
   async function json(url, opcoes) {
+    // Gravações levam o login do dono, se houver (public/js/admin-dono.js): o servidor exige
+    // dono para criar e apagar convites, mudar a configuração e apagar contas de vendedor.
+    if (opcoes && opcoes.method && window.kmTokenDono) {
+      var token = await window.kmTokenDono();
+      if (token) opcoes.headers = Object.assign({}, opcoes.headers, { Authorization: 'Bearer ' + token });
+    }
     var r = await fetch(url, opcoes);
     var corpo = await r.json().catch(function () { return {}; });
     if (!r.ok) throw falha(corpo.codigo || (r.status === 429 ? 'rate_limited' : 'error'), corpo.erro);
