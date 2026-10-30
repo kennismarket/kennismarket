@@ -45,7 +45,8 @@ test('a página do site é o protótipo, só com os ajustes de ligação e o íc
 
 test('se o protótipo mudar, os ajustes que não acharem o trecho aparecem na lista', () => {
   const { faltando } = montarPaginaPrototipo('<html><head></head><body></body></html>');
-  assert.deepEqual(faltando, ['links de convite', 'cotações', 'administração só para donos', 'editor de lojas só para donos']);
+  assert.deepEqual(faltando, ['links de convite', 'cotações', 'painel só para o dono', 'editor de lojas só para o dono',
+    'botão do painel só para o dono', 'login do dono', 'e-mail cabe no campo de usuário', 'sair do site sai da conta de dono']);
 });
 
 test('db: coleções com versão, gravar e apagar documentos', async () => {
@@ -125,12 +126,18 @@ test('importação: envia os arquivos, troca os ids nos documentos e grava as tr
   }
 });
 
-test('administração: a página só abre com login de dono', async () => {
+test('conta de dono: entra pelo login do site, e só ela vê e abre o painel', async () => {
   const html = await (await fetch(base + '/')).text();
   assert.match(html, /<script src="\/js\/admin-dono\.js"><\/script>/);
-  assert.match(html, /function vAdmin\(\)\{if\(!window\.KM_DONO\)return kmLoginDono\(\);/);
-  assert.match(html, /function vEditStore\(\)\{if\(!window\.KM_DONO\)return kmLoginDono\(\);/);
-  assert.match(await (await fetch(base + '/js/admin-dono.js')).text(), /kmLoginDono/);
+  assert.match(html, /function vAdmin\(\)\{if\(!window\.KM_DONO\)return kmSemAcesso\(\);/);
+  assert.match(html, /function vEditStore\(\)\{if\(!window\.KM_DONO\)return kmSemAcesso\(\);/);
+  assert.match(html, /\$\{window\.KM_DONO\?'<button class="btn block" data-a="go" data-v="admin">'\+tr\("accAdmin"\)\+'<\/button>':""\}/);
+  assert.match(html, /function doAuth\(e\)\{e\.preventDefault\(\);if\(authMode==="entrar"&&window\.kmTalvezDono&&kmTalvezDono\(\)\)return;/);
+  assert.match(html, /logout:\(\)=>\{window\.kmSairDono&&kmSairDono\(\);S\.user=null;/);
+  // o aviso de demonstração e o "(demo)" do botão saíram
+  assert.doesNotMatch(html, /\$\{tr\("adminDemo"\)\}/);
+  assert.doesNotMatch(html, /accAdmin:"[^"]*\(demo\)"/);
+  assert.match(await (await fetch(base + '/js/admin-dono.js')).text(), /kmTalvezDono/);
 });
 
 test('administração: /api/admin/eu só responde para o dono', async () => {
