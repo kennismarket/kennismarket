@@ -38,6 +38,8 @@ jobs:
             echo "::error::SITE_URL ou TAREFAS_TOKEN não configurados no GitHub. Nada foi feito."
             exit 1
           fi
+          # Ignora quebras de linha e espaços que sobrem nas pontas ao colar o segredo (o site faz o mesmo).
+          TAREFAS_TOKEN=$(printf '%s' "$TAREFAS_TOKEN" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
           TAREFA="${ESCOLHIDA:-cotacoes}"
           echo "Tarefa: $TAREFA"
           # O servidor pode levar ~1 minuto para acordar: tenta algumas vezes.
@@ -46,4 +48,7 @@ jobs:
           CODIGO=$(curl -sS -o "$RESPOSTA" -w '%{http_code}' --retry 4 --retry-delay 20 --retry-all-errors \
             --max-time 120 -X POST -H "x-tarefas-token: $TAREFAS_TOKEN" "${SITE_URL%/}/api/tarefas/$TAREFA")
           echo "Resposta do site: HTTP $CODIGO"
+          if [ "$CODIGO" = "401" ]; then
+            echo "::error::O site recusou a senha. O segredo TAREFAS_TOKEN do GitHub tem que ser igual ao TAREFAS_TOKEN do Render. Veja ${SITE_URL%/}/api/saude: em \"tarefas\", o token tem que estar \"preenchido\"."
+          fi
           [ "$CODIGO" = "200" ]

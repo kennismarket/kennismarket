@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { config, avisos } from '../config.js';
 import { testarSupabase } from '../lib/supabase.js';
 
+const INICIO = new Date().toISOString(); // muda a cada reinício: mostra se a última mudança no Render já entrou
+
 // Página de checagem: mostra o que está configurado e testa a conexão com o Supabase.
 // Nunca mostra as chaves, só se estão preenchidas.
 export function rotasSaude({ pagamentos }) {
@@ -21,6 +23,9 @@ export function rotasSaude({ pagamentos }) {
         branch: process.env.RENDER_GIT_BRANCH || 'desconhecida',
         commit: (process.env.RENDER_GIT_COMMIT || 'desconhecido').slice(0, 7),
       },
+      // Senha da tarefa diária das cotações (.github/workflows/tarefas.yml).
+      tarefas: { token: config.tarefasToken ? 'preenchido' : 'NÃO PREENCHIDO' },
+      noArDesde: INICIO,
       pagamentos: pagamentos.situacao(),
       avisos,
     });
