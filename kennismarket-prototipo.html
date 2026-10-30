@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html lang="nl" translate="no"><head><meta charset=utf8><meta name="google" content="notranslate"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Kennismarket</title>
 <script>/* tema padrão: escuro */document.documentElement.setAttribute("data-theme","dark")</script>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -3790,7 +3790,7 @@ function footer(){
 function backBar(){return `<div class="backbar"><div class="wrap"><button class="btn backbtn" data-a="back">${icon("back",18)} ${tr("goBack")}</button><button class="btn ghost sm" data-a="go" data-v="explorar">${icon("compass",16)} ${tr("goHome")}</button></div></div>`}
 /* ---------- Render ---------- */
 function render(soft){
-  document.documentElement.lang=S.lang==="pt"?"pt-BR":S.lang;
+  document.documentElement.lang=S.lang;
   if(!S.user){document.body.classList.remove("app");return renderLogin()}
   document.body.classList.add("app");
   if(soft&&S.view==="loja"){refreshAtend(S.shopId);refreshChrome();return}
@@ -4400,7 +4400,7 @@ function confirmBox(title,text,okLabel,okClass,fn){
 }
 function setLang(l){
   if(!LANGS[l]||l===S.lang) return;
-  S.lang=l;save();closeModal();render();
+  S.lang=l;document.documentElement.lang=l;save();closeModal();render();
 }
 
 
@@ -5749,6 +5749,15 @@ document.addEventListener("touchstart",e=>{const b=e.target.closest&&e.target.cl
 /* Avisos rápidos discretos: pílula escura pequena em vez do balão branco */
 .toast{background:color-mix(in srgb,var(--surface) 92%,transparent)!important;color:var(--ink)!important;border:1px solid var(--line);padding:7px 14px!important;font-size:13px!important;font-weight:500!important;line-height:1.3;border-radius:999px!important;box-shadow:0 6px 20px -8px rgba(0,0,0,.5)!important;width:max-content;max-width:min(320px,calc(100% - 48px))!important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);animation:kmToast 2.8s ease both;pointer-events:none}
 @keyframes kmToast{0%{opacity:0;transform:translate(-50%,6px)}8%,85%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,0)}}
+</style>
+
+<style id="km-lang-destaque">
+/* Seletor de idioma em destaque (pedido dos donos): verde, com o globo visível */
+.langwrap{color:var(--safe)}
+.langwrap .ic{display:inline-block!important;color:var(--safe)}
+.langsel{border:2px solid var(--safe);background:var(--safe-soft);color:var(--ink);font-weight:700;box-shadow:0 0 0 3px color-mix(in srgb,var(--safe) 18%,transparent)}
+.langsel:hover,.langsel:focus-visible{border-color:var(--safe);box-shadow:0 0 0 4px color-mix(in srgb,var(--safe) 30%,transparent);outline:none}
+@media (max-width:440px){.top .langwrap .ic{display:none!important}}
 </style>
 
 </body></html>
