@@ -1,7 +1,9 @@
 // Cotações diárias (base: 1 EUR = 1 KN Coin), trazidas da km-api.
 // Fonte 1: Frankfurter (dados oficiais do Banco Central Europeu).
 // Fonte 2: ExchangeRate-API (acesso aberto), para o que o BCE não publica (ARS, UYU) e como reserva.
-// A atualização é disparada uma vez por dia pela tarefa agendada no GitHub.
+// A atualização é disparada uma vez por dia pela tarefa agendada no GitHub. Se a tarefa
+// falhar ou não estiver configurada, o próprio site busca quando alguém pede as cotações
+// e elas estão faltando ou velhas (garantirCotacoes).
 
 export const MOEDAS = (process.env.FX_MOEDAS || 'USD,GBP,BRL,CAD,AUD,MXN,ARS,UYU')
   .split(',').map((c) => c.trim().toUpperCase()).filter(Boolean);
@@ -63,6 +65,28 @@ export async function atualizarCotacoes(repo) {
   const linhas = Object.entries(obtidas).map(([moeda, taxa]) => ({ data: dia, moeda, taxa, fonte: fontes[moeda] }));
   if (linhas.length) await repo.salvarCotacoes(linhas);
   return { data: dia, taxas: obtidas, fontes, faltando: MOEDAS.filter((m) => !obtidas[m]), erros };
+}
+
+// Antes de responder as cotações: se não há nenhuma salva, ou a última é de antes de ontem,
+// busca de novo. Tenta no máximo a cada 6 horas (a cada minuto enquanto não houver nenhuma),
+// uma busca por vez, e espera no máximo 8 segundos: se demorar, responde com o que tem.
+const tentativas = new WeakMap(); // repo → { em, buscando }
+export async function garantirCotacoes(repo, agora = Date.now()) {
+  const linhas = await repo.ultimasCotacoes();
+  const ultima = montarTabela(linhas).data;
+  const anteontem = new Date(agora - 2 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  if (ultima && ultima >= anteontem) return linhas;
+  const t = tentativas.get(repo) || { em: 0, buscando: null };
+  tentativas.set(repo, t);
+  if (!t.buscando && agora - t.em >= (ultima ? 6 * 3600 * 1000 : 60 * 1000)) {
+    t.em = agora;
+    t.buscando = atualizarCotacoes(repo)
+      .then((r) => { if (r.erros.length) console.error('cotações:', r.erros.join(' | ')); })
+      .catch((e) => console.error('cotações:', e.message))
+      .finally(() => { t.buscando = null; });
+  }
+  if (t.buscando) await Promise.race([t.buscando, new Promise((ok) => setTimeout(ok, 8000).unref())]);
+  return repo.ultimasCotacoes();
 }
 
 // Junta as linhas do banco no formato que o site usa: { base, data, taxas: { EUR: 1, BRL: 6.1, ... } }

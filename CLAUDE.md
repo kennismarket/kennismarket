@@ -79,7 +79,7 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 - **Supabase** pra login, banco de dados e armazenamento de arquivos.
 - **Transfeera** pra pagamentos (ver "Módulo de pagamento"). Usar o **sandbox** até os donos autorizarem o dinheiro real.
 - Hospedagem: **versão de testes no Render** (plano grátis, `render.yaml`). Depois, **Hostinger** (Node.js gerenciada, com deploy pelo GitHub).
-- Tarefa agendada (cotação diária do euro) roda pelo **GitHub Actions** (`.github/workflows/tarefas.yml`), porque servidor grátis dorme.
+- Tarefa agendada (cotação diária do euro) roda pelo **GitHub Actions** (`.github/workflows/tarefas.yml`), porque servidor grátis dorme. Ela precisa da variável `SITE_URL` e do segredo `TAREFAS_TOKEN` no GitHub (e do mesmo `TAREFAS_TOKEN` no Render); sem eles, a tarefa acusa falha. Reserva: se as cotações estiverem faltando ou velhas (antes de anteontem), o próprio site busca quando alguém pede (`garantirCotacoes` em `server/lib/cotacoes.js`).
 - Nada de dados guardados em arquivo no servidor: tudo no Supabase.
 - **Banco de dados:** o Supabase está ligado ao GitHub com **Deploy to production**: cada arquivo novo em `supabase/migrations/` é aplicado sozinho quando entra na `main`. Por isso:
   - nunca editar um arquivo de migração que já entrou na `main`; toda mudança vai num arquivo novo, com número maior (`0002_...sql`, `0003_...sql`);

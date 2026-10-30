@@ -35,8 +35,8 @@ jobs:
           ESCOLHIDA: ${{ inputs.tarefa }}
         run: |
           if [ -z "$SITE_URL" ] || [ -z "$TAREFAS_TOKEN" ]; then
-            echo "::warning::SITE_URL ou TAREFAS_TOKEN não configurados no GitHub. Nada foi feito."
-            exit 0
+            echo "::error::SITE_URL ou TAREFAS_TOKEN não configurados no GitHub. Nada foi feito."
+            exit 1
           fi
           TAREFA="${ESCOLHIDA:-cotacoes}"
           echo "Tarefa: $TAREFA"
