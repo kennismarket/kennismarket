@@ -5,7 +5,7 @@ import http from 'node:http';
 import { criarRepoMemoria } from './apoio/repo-memoria.js';
 
 let fontes, servidor, base, repo, cot;
-const estado = { bceFora: false, dia: '2026-10-27', usd: 1.12 };
+const estado = { bceFora: false, reservaFora: false, dia: '2026-10-27', usd: 1.12 };
 
 before(async () => {
   fontes = http.createServer((req, res) => {
@@ -17,6 +17,7 @@ before(async () => {
         .map(([quote, rate]) => ({ date: estado.dia, base: 'EUR', quote, rate })));
     }
     if (req.url === '/reserva') {
+      if (estado.reservaFora) return enviar({}, 503);
       return enviar({ result: 'success', time_last_update_unix: Date.parse(estado.dia) / 1000, base_code: 'EUR',
         rates: { EUR: 1, USD: 1.119, GBP: 0.84, BRL: 5.65, CAD: 1.57, AUD: 1.6, MXN: 20.8, ARS: 1713.3, UYU: 44.9 } });
     }
@@ -43,9 +44,38 @@ test('lê os formatos de resposta mais comuns', () => {
   assert.equal(cot.lerData({ date: '2026-10-27T00:00' }), '2026-10-27');
 });
 
-test('sem cotação salva, a rota avisa em vez de inventar', async () => {
+test('sem cotação salva e com as fontes fora do ar, a rota avisa em vez de inventar', async () => {
+  Object.assign(estado, { bceFora: true, reservaFora: true });
   assert.equal((await get('/api/cotacoes')).s, 503);
   assert.equal((await get('/api/rates')).s, 503);
+  Object.assign(estado, { bceFora: false, reservaFora: false });
+});
+
+test('sem a tarefa do GitHub, o próprio site busca as cotações quando faltam ou estão velhas', async () => {
+  const { criarApp } = await import('../server/app.js');
+  const repo2 = criarRepoMemoria();
+  const srv = criarApp({ repo: repo2 }).listen(0);
+  const b2 = `http://localhost:${srv.address().port}`;
+  try {
+    // nenhuma salva: busca na hora e responde já com a cotação
+    const r = await (await fetch(b2 + '/api/rates')).json();
+    assert.equal(r.date, '2026-10-27');
+    assert.equal(r.rates.BRL, 5.66);
+    // velha (antes de anteontem): busca de novo, mas no máximo a cada 6 horas
+    estado.dia = '2026-10-28';
+    const depois = Date.parse('2026-10-31T12:00:00Z');
+    await cot.garantirCotacoes(repo2, depois);
+    assert.equal(cot.montarTabela(await repo2.ultimasCotacoes()).data, '2026-10-28');
+    estado.dia = '2026-10-29';
+    await cot.garantirCotacoes(repo2, depois + 3600 * 1000 * 24); // um dia depois: velha de novo, busca
+    assert.equal(cot.montarTabela(await repo2.ultimasCotacoes()).data, '2026-10-29');
+    estado.dia = '2026-10-30';
+    await cot.garantirCotacoes(repo2, depois + 3600 * 1000 * 25); // 1 hora depois da última tentativa: não busca
+    assert.equal(cot.montarTabela(await repo2.ultimasCotacoes()).data, '2026-10-29');
+  } finally {
+    srv.close();
+    estado.dia = '2026-10-27';
+  }
 });
 
 test('usa o BCE e completa com a reserva o que o BCE não tem', async () => {

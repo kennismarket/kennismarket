@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { montarTabela } from '../lib/cotacoes.js';
+import { garantirCotacoes, montarTabela } from '../lib/cotacoes.js';
 import { erro, rota } from '../lib/seguranca.js';
 
 // Cotações públicas (só leitura): o site lê daqui, nunca direto da fonte externa.
@@ -8,7 +8,7 @@ export function rotasCotacoes({ repo }) {
   r.use((_req, res, next) => { res.set('Cache-Control', 'public, max-age=900'); next(); });
 
   r.get('/', rota(async (_req, res) => {
-    const t = montarTabela(await repo.ultimasCotacoes());
+    const t = montarTabela(await garantirCotacoes(repo));
     if (!t.data) throw erro(503, 'ainda sem cotações salvas');
     res.json(t);
   }));
@@ -34,7 +34,7 @@ export function rotaRatesPrototipo({ repo }) {
   const r = Router();
   r.get('/', rota(async (_req, res) => {
     res.set({ 'Cache-Control': 'public, max-age=900', 'Access-Control-Allow-Origin': '*' });
-    const t = montarTabela(await repo.ultimasCotacoes());
+    const t = montarTabela(await garantirCotacoes(repo));
     if (!t.data) throw erro(503, 'ainda sem cotações salvas');
     res.json({ base: t.base, date: t.data, rates: t.taxas });
   }));
