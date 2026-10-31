@@ -296,3 +296,16 @@ test('checkout: /api/pedidos/preco diz se a compra é de verdade e quanto custa'
   assert.equal(ok.simulado, true);
   assert.ok(ok.produtoId);
 });
+
+test('checkout: CPF/CNPJ só é obrigatório no boleto; no Pix é opcional', async () => {
+  const lojaReal6500 = Object.values(repo.tabelas.lojas).find((l) => l.prototipo_id === 6500); // do teste anterior, com recebimento
+  const produto = Object.values(repo.tabelas.produtos).find((p) => p.loja_id === lojaReal6500.id && p.prototipo_id === 'b6500');
+  const comprar = (corpo) => fetch(`${base}/api/pedidos`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cliente}` },
+    body: JSON.stringify({ produtoId: produto.id, ...corpo }) }).then(async (r) => ({ s: r.status, j: await r.json() }));
+  const pix = await comprar({ formaPagamento: 'pix' });
+  assert.equal(pix.s, 201);
+  assert.ok(pix.j.pix.copiaECola);
+  assert.equal((await comprar({ formaPagamento: 'boleto' })).s, 400);
+  assert.equal((await comprar({ formaPagamento: 'pix', cpfCnpj: '123' })).s, 400); // se vier, tem que ser válido
+  assert.equal((await comprar({ formaPagamento: 'boleto', cpfCnpj: '111.444.777-35' })).s, 201);
+});

@@ -61,8 +61,10 @@ export function rotasPedidos({ repo, pagamentos }) {
   r.post('/', rota(async (req, res) => {
     const { produtoId, formaPagamento, cpfCnpj, moedaExibida } = req.body || {};
     if (!pagamentos.formas.includes(formaPagamento)) throw erro(400, `formaPagamento: ${pagamentos.formas.join(', ')}`);
-    const documento = documentoValido(cpfCnpj);
-    if (!documento) throw erro(400, 'CPF ou CNPJ inválido');
+    // CPF/CNPJ de quem paga: obrigatório no boleto (e cartão); no Pix, só se a pessoa mandar (decisão dos donos).
+    const documento = cpfCnpj ? documentoValido(cpfCnpj) : null;
+    if (cpfCnpj && !documento) throw erro(400, 'CPF ou CNPJ inválido');
+    if (!documento && formaPagamento !== 'pix') throw erro(400, 'CPF ou CNPJ obrigatório no boleto');
 
     const produto = produtoId && await repo.produto(produtoId);
     const loja = produto && await repo.loja(produto.loja_id);

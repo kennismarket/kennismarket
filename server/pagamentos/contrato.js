@@ -10,7 +10,8 @@
 //
 // criarCobranca({ pedidoId, valorCentavos, forma, descricao, vencimento, pagador, divisao })
 //   forma: pix | boleto | cartao
-//   pagador: { nome, email, documento }
+//   pagador: { nome, email, documento }   ← documento (CPF/CNPJ) obrigatório no boleto e no cartão;
+//                                            no Pix é opcional (decisão dos donos; confirmar na documentação da Transfeera)
 //   divisao: { vendedor: { centavos, recebedor }, plataforma: { centavos } }  ← soma = valorCentavos
 //   → { cobrancaId, pix?: { copiaECola, imagem?, validoAte? }, boleto?: { linhaDigitavel, link? }, linkPagamento? }
 //
@@ -61,8 +62,10 @@ export function validarCobranca(d, formasAtivas) {
   if (!centavosOk(d.valorCentavos)) throw invalido('cobrança: valor inválido');
   if (!formasAtivas.includes(d.forma)) throw invalido(`cobrança: forma de pagamento indisponível (${formasAtivas.join(', ')})`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d.vencimento || '')) throw invalido('cobrança: vencimento no formato AAAA-MM-DD');
-  if (!texto(d.pagador?.nome) || !texto(d.pagador?.email) || !documentoValido(d.pagador?.documento)) {
-    throw invalido('cobrança: pagador precisa de nome, e-mail e CPF/CNPJ válido');
+  const doc = d.pagador?.documento;
+  const docOk = d.forma === 'pix' ? (doc == null || documentoValido(doc)) : documentoValido(doc);
+  if (!texto(d.pagador?.nome) || !texto(d.pagador?.email) || !docOk) {
+    throw invalido(d.forma === 'pix' ? 'cobrança: pagador precisa de nome e e-mail (CPF/CNPJ, se vier, válido)' : 'cobrança: pagador precisa de nome, e-mail e CPF/CNPJ válido');
   }
   const v = d.divisao?.vendedor;
   const p = d.divisao?.plataforma;
