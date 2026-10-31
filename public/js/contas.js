@@ -7,7 +7,9 @@
  *   - link de convite do vendedor (#convite-<token>): criar a conta, entrar e trocar a senha
  *     pelo link novo que o dono gera no painel;
  *   - página "Minha conta": nome, usuário e e-mail, e "Alterar senha";
- *   - conta de dono: mesma tela inicial; só ela vê e abre o painel do dono.
+ *   - conta de dono: mesma tela inicial; só ela vê e abre o painel do dono, que ganha a seção
+ *     "Contas" (buscar, senha temporária, banir);
+ *   - "Excluir conta" na página da conta, com a senha.
  * Os botões de "conta de demonstração" continuam como no protótipo (só no navegador).
  *
  * As funções do protótipo são trocadas depois que a página carrega (DOMContentLoaded),
@@ -28,6 +30,32 @@
     es: { checando: 'Comprobando…', invalido: 'Usuario o contraseña incorrectos.', emailUso: 'Este correo ya tiene una cuenta.', senhaErrada: 'Tu contraseña actual no es correcta.', falha: 'Algo salió mal. Inténtalo de nuevo.' },
     pt: { checando: 'Conferindo…', invalido: 'Usuário ou senha incorretos.', emailUso: 'Este e-mail já tem uma conta.', senhaErrada: 'Sua senha atual está incorreta.', falha: 'Algo deu errado. Tente de novo.' },
   };
+  // Excluir conta, conta banida e a seção "Contas" do painel do dono.
+  var TXT2 = {
+    nl: { excluirD: 'Je account wordt van Kennismarket verwijderd en je wordt uitgelogd. Dit kan niet ongedaan worden. Vul je wachtwoord in om te bevestigen.', senhaIncorreta: 'Wachtwoord onjuist.', contaDono: 'Een eigenaarsaccount kan hier niet worden verwijderd.', banida: 'Dit account is geblokkeerd. Neem contact op met support.',
+      contasT: 'Accounts', contasD: 'Zoek een account op naam, gebruikersnaam of e-mail om een tijdelijk wachtwoord te maken of het account te blokkeren.', busca: 'Naam, gebruikersnaam of e-mail', buscar: 'Zoeken', min2: 'Typ minstens 2 tekens.', nenhuma: 'Geen accounts gevonden.', semEmail: 'geen e-mail',
+      cliente: 'Klant', vendedor: 'Verkoper', dono: 'Eigenaar', bloqueada: 'Geblokkeerd', novaSenha: 'Nieuw wachtwoord', banir: 'Blokkeren', desbanir: 'Deblokkeren',
+      senhaTemp: 'Tijdelijk wachtwoord (geef het door; de persoon wijzigt het in Mijn account):', senhaT: 'Nieuw wachtwoord maken?', senhaD: 'Het huidige wachtwoord werkt dan niet meer.', banirT: 'Dit account blokkeren?', banirD: 'De persoon wordt meteen uitgelogd en kan niet meer inloggen. Dit kan ongedaan worden.' },
+    en: { excluirD: 'Your account will be deleted from Kennismarket and you will be signed out. This can’t be undone. Enter your password to confirm.', senhaIncorreta: 'Wrong password.', contaDono: 'An owner account can’t be deleted here.', banida: 'This account is suspended. Please contact support.',
+      contasT: 'Accounts', contasD: 'Find an account by name, username or email to create a temporary password or ban it.', busca: 'Name, username or email', buscar: 'Search', min2: 'Type at least 2 characters.', nenhuma: 'No accounts found.', semEmail: 'no email',
+      cliente: 'Customer', vendedor: 'Seller', dono: 'Owner', bloqueada: 'Banned', novaSenha: 'New password', banir: 'Ban', desbanir: 'Unban',
+      senhaTemp: 'Temporary password (send it to the person; they change it in My account):', senhaT: 'Create a new password?', senhaD: 'The current password will stop working.', banirT: 'Ban this account?', banirD: 'The person is signed out right away and can’t sign in again. You can undo this.' },
+    es: { excluirD: 'Tu cuenta se eliminará de Kennismarket y saldrás. No se puede deshacer. Escribe tu contraseña para confirmar.', senhaIncorreta: 'Contraseña incorrecta.', contaDono: 'Una cuenta de dueño no se puede eliminar aquí.', banida: 'Esta cuenta está suspendida. Contacta con soporte.',
+      contasT: 'Cuentas', contasD: 'Busca una cuenta por nombre, usuario o correo para crear una contraseña temporal o bloquearla.', busca: 'Nombre, usuario o correo', buscar: 'Buscar', min2: 'Escribe al menos 2 caracteres.', nenhuma: 'No se encontraron cuentas.', semEmail: 'sin correo',
+      cliente: 'Cliente', vendedor: 'Vendedor', dono: 'Dueño', bloqueada: 'Bloqueada', novaSenha: 'Nueva contraseña', banir: 'Bloquear', desbanir: 'Desbloquear',
+      senhaTemp: 'Contraseña temporal (pásala a la persona; la cambia en Mi cuenta):', senhaT: '¿Crear una contraseña nueva?', senhaD: 'La contraseña actual dejará de funcionar.', banirT: '¿Bloquear esta cuenta?', banirD: 'La persona sale al instante y no puede volver a entrar. Se puede deshacer.' },
+    pt: { excluirD: 'Sua conta será apagada do Kennismarket e você sairá. Isso não pode ser desfeito. Digite sua senha para confirmar.', senhaIncorreta: 'Senha incorreta.', contaDono: 'Conta de dono não pode ser excluída por aqui.', banida: 'Esta conta está suspensa. Fale com o suporte.',
+      contasT: 'Contas', contasD: 'Encontre uma conta pelo nome, usuário ou e-mail para gerar uma senha temporária ou banir.', busca: 'Nome, usuário ou e-mail', buscar: 'Buscar', min2: 'Digite pelo menos 2 letras.', nenhuma: 'Nenhuma conta encontrada.', semEmail: 'sem e-mail',
+      cliente: 'Cliente', vendedor: 'Vendedor', dono: 'Dono', bloqueada: 'Banida', novaSenha: 'Nova senha', banir: 'Banir', desbanir: 'Desbanir',
+      senhaTemp: 'Senha temporária (passe para a pessoa; ela troca em Minha conta):', senhaT: 'Gerar uma senha nova?', senhaD: 'A senha atual deixa de funcionar.', banirT: 'Banir esta conta?', banirD: 'A pessoa sai na hora e não consegue mais entrar. Dá para desfazer.' },
+  };
+  function txt2(k) {
+    var lg = (typeof S !== 'undefined' && S.lang) || 'nl';
+    return (TXT2[lg] || TXT2.nl)[k];
+  }
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; });
+  }
   function txt(k) {
     var lg = (typeof S !== 'undefined' && S.lang) || 'nl';
     return (TXT[lg] || TXT.nl)[k];
@@ -44,6 +72,8 @@
       case 'email_invalido': return tr('errEmail');
       case 'senha_errada': return txt('senhaErrada');
       case 'convite_invalido': case 'convite_usado': return tr('slBad');
+      case 'conta_banida': return txt2('banida');
+      case 'conta_dono': return txt2('contaDono');
       default: return txt('falha');
     }
   }
@@ -233,7 +263,112 @@
       };
       return r;
     };
+
+    // "Excluir conta": contas reais apagam no servidor, com a senha; as de demonstração, como antes.
+    var excluirConta = A.accdel;
+    A.accdel = function () {
+      if (!(S.user && S.user.contaId)) return excluirConta.apply(this, arguments);
+      modal('<h2>' + tr('accDelT') + '</h2><p class="sub">' + txt2('excluirD') + '</p>' +
+        '<div class="field"><label for="del-pass">' + tr('password') + '</label><input id="del-pass" type="password" autocomplete="current-password"></div>' +
+        '<p class="err" id="del-err"></p>' +
+        '<button class="btn danger block" id="ok">' + tr('accDelB') + '</button><button class="btn block" data-a="close">' + tr('cancelB') + '</button>', function (m) {
+        var ok = m.querySelector('#ok');
+        ok.onclick = async function () {
+          var senha = m.querySelector('#del-pass').value, e = m.querySelector('#del-err');
+          if (!senha) return (e.textContent = tr('errPass'));
+          ok.disabled = true;
+          try {
+            await api('DELETE', '/conta', { senha: senha }, true);
+            sair();
+            try { localStorage.removeItem(KEY); } catch (x) {}
+            location.hash = '';
+            location.reload();
+          } catch (x) {
+            e.textContent = x.codigo === 'senha_errada' ? txt2('senhaIncorreta') : mensagem(x.codigo);
+            ok.disabled = false;
+          }
+        };
+      });
+    };
   }
+
+  // ---------- painel do dono: seção "Contas" ----------
+  var contas = { q: '', lista: null, erro: '', senhas: {} };
+  function redesenharPainel() {
+    var y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
+  }
+  async function admin(metodo, caminho, corpo) {
+    var t = await window.kmToken();
+    var r = await fetch('/api/admin' + caminho, {
+      method: metodo,
+      headers: Object.assign({ 'Content-Type': 'application/json' }, t ? { Authorization: 'Bearer ' + t } : {}),
+      body: corpo ? JSON.stringify(corpo) : undefined,
+    });
+    var j = await r.json().catch(function () { return {}; });
+    if (!r.ok) throw Object.assign(new Error(j.erro || 'erro'), { status: r.status });
+    return j;
+  }
+  // HTML da seção, colocado no fim do painel (ajuste em server/lib/pagina-prototipo.js).
+  window.kmContasHTML = function () {
+    var linhas = '';
+    if (contas.lista && !contas.lista.length) linhas = '<p class="muted">' + txt2('nenhuma') + '</p>';
+    (contas.lista || []).forEach(function (c) {
+      var papel = c.banida ? '<span class="pill danger">' + txt2('bloqueada') + '</span>'
+        : '<span class="pill ' + (c.papel === 'cliente' ? 'off' : 'safe') + '">' + txt2(c.papel) + '</span>';
+      var acoes = c.papel === 'dono' ? '' : '<div class="acts">' +
+        '<button class="btn sm" data-km-conta="senha" data-id="' + esc(c.id) + '">' + txt2('novaSenha') + '</button>' +
+        (c.banida ? '<button class="btn sm" data-km-conta="desbanir" data-id="' + esc(c.id) + '">' + txt2('desbanir') + '</button>'
+          : '<button class="btn sm danger" data-km-conta="banir" data-id="' + esc(c.id) + '">' + txt2('banir') + '</button>') + '</div>';
+      var senha = contas.senhas[c.id] ? '<div class="invcode">' + txt2('senhaTemp') + ' <code>' + esc(contas.senhas[c.id]) + '</code></div>' : '';
+      linhas += '<div class="inv"><div class="inv-t"><b>' + esc(c.nome || '—') + '</b>' + papel + '</div>' +
+        '<span class="muted" style="font-size:13.5px">' + (c.usuario ? '@' + esc(c.usuario) : '—') + ' · ' + (c.email ? esc(c.email) : txt2('semEmail')) + '</span>' +
+        senha + acoes + '</div>';
+    });
+    return '<section class="panel span2" id="km-contas"><h2>' + txt2('contasT') + '</h2><p class="sub">' + txt2('contasD') + '</p>' +
+      '<form class="invform" id="km-contas-busca" novalidate><div class="field"><label for="km-contas-q">' + txt2('busca') + '</label>' +
+      '<input id="km-contas-q" type="search" autocomplete="off" value="' + esc(contas.q) + '"></div>' +
+      '<button class="btn primary" type="submit">' + txt2('buscar') + '</button></form>' +
+      '<p class="err">' + esc(contas.erro) + '</p><div class="invlist">' + linhas + '</div></section>';
+  };
+  async function buscarContas() {
+    contas.erro = '';
+    if (contas.q.trim().length < 2) { contas.lista = null; contas.erro = txt2('min2'); return redesenharPainel(); }
+    try {
+      contas.lista = (await admin('GET', '/contas?q=' + encodeURIComponent(contas.q.trim()))).contas;
+    } catch (x) {
+      contas.erro = txt('falha');
+    }
+    redesenharPainel();
+  }
+  document.addEventListener('submit', function (e) {
+    if (!e.target || e.target.id !== 'km-contas-busca') return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    contas.q = document.getElementById('km-contas-q').value;
+    buscarContas();
+  }, true);
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest && e.target.closest('[data-km-conta]');
+    if (!b) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    var id = b.getAttribute('data-id'), acao = b.getAttribute('data-km-conta');
+    var fazer = async function () {
+      try {
+        if (acao === 'senha') contas.senhas[id] = (await admin('POST', '/contas/' + encodeURIComponent(id) + '/senha', {})).senha;
+        else await admin('POST', '/contas/' + encodeURIComponent(id) + '/banir', { banir: acao === 'banir' });
+        await buscarContas();
+      } catch (x) {
+        contas.erro = txt('falha');
+        redesenharPainel();
+      }
+    };
+    if (acao === 'desbanir') return fazer();
+    confirmBox(txt2(acao === 'senha' ? 'senhaT' : 'banirT'), txt2(acao === 'senha' ? 'senhaD' : 'banirD'),
+      txt2(acao === 'senha' ? 'novaSenha' : 'banir'), acao === 'senha' ? 'primary' : 'danger', fazer);
+  }, true);
 
   // Ao abrir o site: confere a sessão guardada. Conta real sem sessão válida sai do site.
   async function conferir() {

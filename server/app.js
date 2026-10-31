@@ -19,7 +19,8 @@ import { montarPaginaPrototipo } from './lib/pagina-prototipo.js';
 const pastaPublica = fileURLToPath(new URL('../public', import.meta.url));
 
 // Monta o site. Os testes passam um banco de dados em memória.
-export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), paginaPrototipo = montarPaginaPrototipo() } = {}) {
+// limites: { desligados: true } só nos testes, que fazem muitos logins seguidos.
+export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), paginaPrototipo = montarPaginaPrototipo(), limites = {} } = {}) {
   const app = express();
   const deps = { repo, pagamentos };
   const teste = rotasTeste(deps);
@@ -42,7 +43,7 @@ export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), pa
   app.use('/api/rates', rotaRatesPrototipo(deps)); // formato que o protótipo espera (RATES_URL)
   app.use('/api/pedidos', rotasPedidos(deps));
   app.use('/api/loja', rotasLoja(deps));
-  app.use('/api/contas', rotasContas({ ...deps, mudouPrototipo: prototipo.mudou }));
+  app.use('/api/contas', rotasContas({ ...deps, mudouPrototipo: prototipo.mudou, limites }));
   app.use('/api/admin', rotasAdmin(deps));
   app.use('/api/tarefas', rotasTarefas(deps));
   app.use('/api/teste', teste.api);

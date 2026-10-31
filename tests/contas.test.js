@@ -9,7 +9,7 @@ let repo, base, servidor;
 before(async () => {
   const { criarApp } = await import('../server/app.js');
   repo = criarRepoMemoria();
-  servidor = criarApp({ repo }).listen(0);
+  servidor = criarApp({ repo, limites: { desligados: true } }).listen(0);
   base = `http://localhost:${servidor.address().port}`;
 });
 after(() => servidor.close());
@@ -175,4 +175,87 @@ test('minha conta: vendedor que troca o usuário entra pelo link com o usuário 
   assert.equal((await doc('sellers', 'acc-perf111')).acc.username, 'loja_nova');
   assert.equal((await pedir('POST', '/api/contas/vendedor/entrar', { token: 'perf111', usuario: 'loja_nova', senha: 'segredo123' })).s, 200);
   assert.equal((await pedir('POST', '/api/contas/vendedor/entrar', { token: 'perf111', usuario: 'loja_velha', senha: 'segredo123' })).s, 401);
+});
+
+test('excluir conta: pede a senha, apaga o login; com pedidos, apaga só os dados pessoais', async () => {
+  const a = await pedir('POST', '/api/contas/cadastro', { nome: 'Bruno Dias', usuario: 'bruno', senha: 'segredo123' });
+  const t = a.j.sessao.access_token;
+  assert.equal((await pedir('DELETE', '/api/contas/conta', { senha: 'errada123' }, t)).j.codigo, 'senha_errada');
+  const r = await pedir('DELETE', '/api/contas/conta', { senha: 'segredo123' }, t);
+  assert.equal(r.s, 200);
+  assert.equal(r.j.apagada, true);
+  assert.equal((await pedir('POST', '/api/contas/entrar', { login: 'bruno', senha: 'segredo123' })).s, 401);
+  assert.equal((await pedir('GET', '/api/contas/eu', null, t)).s, 401);
+  // o nome de usuário fica livre de novo
+  assert.equal((await pedir('POST', '/api/contas/cadastro', { nome: 'Bruno Outro', usuario: 'bruno', senha: 'segredo123' })).s, 201);
+
+  // com pedido real: a conta é desligada e anonimizada, o pedido continua
+  const c = await pedir('POST', '/api/contas/cadastro', { nome: 'Carla Pedido', usuario: 'carla', senha: 'segredo123', email: 'carla@ex.com' });
+  repo.tabelas.pedidos['ped-carla'] = { id: 'ped-carla', cliente_id: c.j.perfil.id };
+  const r2 = await pedir('DELETE', '/api/contas/conta', { senha: 'segredo123' }, c.j.sessao.access_token);
+  assert.equal(r2.j.apagada, false);
+  const conta = repo.tabelas.contas[c.j.perfil.id];
+  assert.deepEqual([conta.nome, conta.usuario], ['Conta excluída', null]);
+  assert.match(conta.email, /\.invalid$/);
+  assert.ok(repo.tabelas.pedidos['ped-carla']);
+  assert.equal((await pedir('POST', '/api/contas/entrar', { login: 'carla@ex.com', senha: 'segredo123' })).s, 401);
+});
+
+test('excluir conta: vendedor perde o link; dono não exclui por aqui', async () => {
+  await repo.salvarDocPrototipo('stores', 'inv-del111', { invite: { token: 'del111', email: 'd@ex.com', exp: Date.now() + 864e5, used: false } });
+  const v = await pedir('POST', '/api/contas/vendedor/criar', { token: 'del111', usuario: 'vend_del', senha: 'segredo123' });
+  assert.equal((await pedir('DELETE', '/api/contas/conta', { senha: 'segredo123' }, v.j.sessao.access_token)).s, 200);
+  assert.equal(await doc('sellers', 'acc-del111'), undefined);
+
+  await repo.criarConta({ email: 'dono2@ex.com', senha: 'segredo123', nome: 'Dono Dois', usuario: null, papel: 'dono' });
+  const d = await pedir('POST', '/api/contas/entrar', { login: 'dono2@ex.com', senha: 'segredo123' });
+  assert.equal((await pedir('DELETE', '/api/contas/conta', { senha: 'segredo123' }, d.j.sessao.access_token)).j.codigo, 'conta_dono');
+});
+
+test('painel do dono: buscar contas, senha temporária e banir', async () => {
+  await repo.criarConta({ email: 'dono3@ex.com', senha: 'segredo123', nome: 'Dono Tres', usuario: 'dono_tres', papel: 'dono' });
+  const dono = (await pedir('POST', '/api/contas/entrar', { login: 'dono3@ex.com', senha: 'segredo123' })).j.sessao.access_token;
+  const cli = await pedir('POST', '/api/contas/cadastro', { nome: 'Fabio Cliente', usuario: 'fabio_c', senha: 'segredo123' });
+  const id = cli.j.perfil.id;
+
+  // só o dono
+  assert.equal((await pedir('GET', '/api/admin/contas?q=fabio', null, cli.j.sessao.access_token)).s, 403);
+  // busca por nome, usuário ou e-mail; e-mail interno não aparece
+  const b = await pedir('GET', '/api/admin/contas?q=FABIO', null, dono);
+  assert.equal(b.s, 200);
+  const achada = b.j.contas.find((c) => c.id === id);
+  assert.equal(achada.usuario, 'fabio_c');
+  assert.equal(achada.email, '');
+  assert.equal((await pedir('GET', '/api/admin/contas?q=f', null, dono)).s, 400);
+
+  // senha temporária: a antiga para de funcionar, a nova entra
+  const s = await pedir('POST', `/api/admin/contas/${id}/senha`, {}, dono);
+  assert.match(s.j.senha, /^[a-z2-9]{12}$/);
+  assert.equal((await pedir('POST', '/api/contas/entrar', { login: 'fabio_c', senha: 'segredo123' })).s, 401);
+  const nova = await pedir('POST', '/api/contas/entrar', { login: 'fabio_c', senha: s.j.senha });
+  assert.equal(nova.s, 200);
+
+  // banir: perde o acesso na hora e não entra mais; desbanir volta
+  assert.equal((await pedir('POST', `/api/admin/contas/${id}/banir`, { banir: true }, dono)).s, 200);
+  assert.equal((await pedir('GET', '/api/contas/eu', null, nova.j.sessao.access_token)).s, 401);
+  assert.equal((await pedir('POST', '/api/contas/entrar', { login: 'fabio_c', senha: s.j.senha })).j.codigo, 'conta_banida');
+  assert.equal((await pedir('GET', '/api/admin/contas?q=fabio', null, dono)).j.contas.find((c) => c.id === id).banida, true);
+  assert.equal((await pedir('POST', `/api/admin/contas/${id}/banir`, { banir: false }, dono)).s, 200);
+  assert.equal((await pedir('POST', '/api/contas/entrar', { login: 'fabio_c', senha: s.j.senha })).s, 200);
+
+  // contas de dono não são alteradas pelo painel
+  const outroDono = (await repo.perfilPorUsuario('dono_tres')).id;
+  assert.equal((await pedir('POST', `/api/admin/contas/${outroDono}/banir`, { banir: true }, dono)).s, 403);
+  assert.equal((await pedir('POST', `/api/admin/contas/${outroDono}/senha`, {}, dono)).s, 403);
+});
+
+test('limite de tentativas de login por IP (fora dos testes, sempre ligado)', async () => {
+  const { criarApp } = await import('../server/app.js');
+  const srv = criarApp({ repo: criarRepoMemoria() }).listen(0);
+  try {
+    const url = `http://localhost:${srv.address().port}/api/contas/entrar`;
+    const tentar = () => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: 'x_x', senha: 'y' }) });
+    for (let i = 0; i < 30; i++) assert.equal((await tentar()).status, 401);
+    assert.equal((await tentar()).status, 429);
+  } finally { srv.close(); }
 });
