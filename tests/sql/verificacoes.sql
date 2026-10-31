@@ -194,5 +194,26 @@ do $$ begin
   assert (select enviado_por from prototipo_arquivos where id = repeat('a', 32)) = '00000000-0000-0000-0000-00000000000b', 'guarda quem enviou';
 end $$;
 
+-- 0006: cópia das lojas do protótipo
+do $$ begin
+  insert into lojas (vendedor_id, nome, slug, prototipo_id) values (null, 'Loja do dono', 'loja-p1', 1);
+  assert (select porcentagem_vendedor from lojas where prototipo_id = 1) = 50, 'padrão 50%';
+  begin
+    update lojas set porcentagem_vendedor = 95 where prototipo_id = 1;
+    raise exception 'devia recusar porcentagem acima de 90';
+  exception when check_violation then null; end;
+  begin
+    insert into lojas (vendedor_id, nome, slug, prototipo_id) values (null, 'Outra', 'loja-p1b', 1);
+    raise exception 'devia recusar a mesma loja do protótipo duas vezes';
+  exception when unique_violation then null; end;
+  insert into produtos (loja_id, categoria, titulo, preco_kn, prototipo_id)
+    select id, 'mentoria', 'P', 10, 'x1' from lojas where prototipo_id = 1;
+  begin
+    insert into produtos (loja_id, categoria, titulo, preco_kn, prototipo_id)
+      select id, 'mentoria', 'P2', 10, 'x1' from lojas where prototipo_id = 1;
+    raise exception 'devia recusar o mesmo produto duas vezes na mesma loja';
+  exception when unique_violation then null; end;
+end $$;
+
 rollback;
 \echo 'BANCO: todas as verificações passaram'

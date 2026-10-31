@@ -186,3 +186,88 @@ test('cópia da loja no documento do vendedor: sem inventar nota e sem apontar p
   assert.equal(a.banida, true);
   assert.equal(a.store.pub, false);
 });
+
+// ---------- cópia nas tabelas reais (lojas e produtos) e porcentagem no pedido ----------
+const lojaReal = (pid) => Object.values(repo.tabelas.lojas).find((l) => l.prototipo_id === pid);
+const produtosReais = (pid) => Object.values(repo.tabelas.produtos).filter((p) => p.loja_id === lojaReal(pid)?.id);
+const lojaCompleta = (id, extra = {}) => ({ store: { id, n: `Loja ${id}`, c: 'mentoria', desc: ['Desc en', 'Desc es', 'Descrição pt', 'Desc nl'],
+  prods: [{ id: `a${id}`, name: ['Mentoring', 'Mentoría', 'Mentoria', 'Mentoring'], desc: ['', '', '1 hora', ''], price: 100 },
+    { id: `b${id}`, name: ['Ebook', 'Ebook', 'E-book', 'Ebook'], price: 19 }], ...extra }, ts: 1 });
+
+test('cópia: a loja do vendedor vai para as tabelas, com produtos em português e a dona certa', async () => {
+  const lia = await vendedor('liatok1', 'lia_v');
+  assert.equal(await gravar('PUT', 'stores/s6001', lojaCompleta(6001), lia.t), 200);
+  const l = lojaReal(6001);
+  assert.equal(l.vendedor_id, lia.id);
+  assert.equal(l.nome, 'Loja 6001');
+  assert.equal(l.descricao, 'Descrição pt');
+  assert.equal(l.publicada, true);
+  assert.equal(l.porcentagem_vendedor, 50);
+  const ps = produtosReais(6001);
+  assert.deepEqual(ps.map((p) => [p.prototipo_id, p.titulo, p.preco_kn, p.ativo]).sort(), [['a6001', 'Mentoria', 100, true], ['b6001', 'E-book', 19, true]]);
+
+  // tirou um produto: ele fica inativo; o dono define 70% e a cópia acompanha
+  const sem = lojaCompleta(6001); sem.store.prods = sem.store.prods.slice(0, 1);
+  assert.equal(await gravar('PUT', 'stores/s6001', sem, lia.t), 200);
+  assert.equal(produtosReais(6001).find((p) => p.prototipo_id === 'b6001').ativo, false);
+  assert.equal(await gravar('PUT', 'stores/s6001', lojaCompleta(6001, { split: 70 }), dono), 200);
+  assert.equal(lojaReal(6001).porcentagem_vendedor, 70);
+
+  // escondida do catálogo: não publicada
+  assert.equal(await gravar('PUT', 'stores/s6001', lojaCompleta(6001, { split: 70, pub: false }), dono), 200);
+  assert.equal(lojaReal(6001).publicada, false);
+  assert.equal(await gravar('PUT', 'stores/s6001', lojaCompleta(6001, { split: 70 }), dono), 200);
+});
+
+test('cópia: loja que existe só no documento do vendedor, loja apagada e loja banida', async () => {
+  const max = await vendedor('maxtok1', 'max_v');
+  const acc = (await doc('sellers', 'acc-maxtok1')).acc;
+  assert.equal(await gravar('PUT', 'sellers/acc-maxtok1', { acc: { ...acc, storeId: 6100, store: lojaCompleta(6100).store } }, max.t), 200);
+  assert.equal(lojaReal(6100).vendedor_id, max.id);
+  // ganhou documento de loja e depois foi apagado: continua pela cópia do vendedor
+  assert.equal(await gravar('PUT', 'stores/s6100', lojaCompleta(6100), max.t), 200);
+  assert.equal(await gravar('DELETE', 'stores/s6100', null, max.t), 200);
+  assert.equal(lojaReal(6100).publicada, true);
+  // banido: sai do ar nas tabelas também
+  await fetch(`${base}/api/admin/contas/${max.id}/banir`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dono}` }, body: JSON.stringify({ banir: true }) });
+  assert.deepEqual([lojaReal(6100).publicada, lojaReal(6100).banida], [false, true]);
+  // loja do dono apagada de vez: sai do ar, os produtos ficam inativos
+  assert.equal(await gravar('PUT', 'stores/s6200', lojaCompleta(6200), dono), 200);
+  assert.equal(lojaReal(6200).vendedor_id, null);
+  assert.equal(await gravar('DELETE', 'stores/s6200', null, dono), 200);
+  assert.equal(lojaReal(6200).publicada, false);
+  assert.ok(produtosReais(6200).every((p) => !p.ativo));
+});
+
+test('copiar todas (painel do dono): pega lojas gravadas direto no banco', async () => {
+  await repo.salvarDocPrototipo('stores', 's6300', lojaCompleta(6300));
+  assert.equal(lojaReal(6300), undefined);
+  const r = await fetch(`${base}/api/admin/lojas/copiar`, { method: 'POST', headers: { Authorization: `Bearer ${dono}` } }).then((x) => x.json());
+  assert.ok(r.copiadas >= 1);
+  assert.deepEqual(r.erros, []);
+  assert.equal(lojaReal(6300).nome, 'Loja 6300');
+  assert.equal((await fetch(`${base}/api/admin/lojas/copiar`, { method: 'POST', headers: { Authorization: `Bearer ${cliente}` } })).status, 403);
+});
+
+test('pedido: a divisão usa a porcentagem da loja, congelada no pedido', async () => {
+  const nina = await vendedor('ninatok1', 'nina_v');
+  assert.equal(await gravar('PUT', 'stores/s6400', lojaCompleta(6400), nina.t), 200);
+  assert.equal(await gravar('PUT', 'stores/s6400', lojaCompleta(6400, { split: 70 }), dono), 200);
+  // a vendedora diz como recebe (a loja dela agora existe nas tabelas)
+  const rec = await fetch(`${base}/api/loja/recebimento`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${nina.t}` },
+    body: JSON.stringify({ nome: 'Nina Lima', cpfCnpj: '529.982.247-25', pix: { chave: 'nina@ex.com', tipo: 'email' } }) });
+  assert.equal(rec.status, 200);
+  await repo.salvarCotacoes([{ data: '2026-10-30', moeda: 'BRL', taxa: 6, fonte: 'bce' }]);
+  const produto = produtosReais(6400).find((p) => p.prototipo_id === 'a6400'); // 100 KN
+  const r = await fetch(`${base}/api/pedidos`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cliente}` },
+    body: JSON.stringify({ produtoId: produto.id, formaPagamento: 'pix', cpfCnpj: '111.444.777-35' }) });
+  assert.equal(r.status, 201);
+  const pedido = repo.tabelas.pedidos[(await r.json()).id];
+  assert.equal(pedido.valor_centavos, 60000); // 100 KN × R$ 6
+  assert.equal(pedido.vendedor_centavos, 42000); // 70%
+  assert.equal(pedido.plataforma_centavos, 18000);
+  assert.equal(pedido.taxa_percentual, 30);
+  // o dono muda a porcentagem depois: o pedido já feito não muda
+  assert.equal(await gravar('PUT', 'stores/s6400', lojaCompleta(6400, { split: 40 }), dono), 200);
+  assert.equal(repo.tabelas.pedidos[pedido.id].vendedor_centavos, 42000);
+});

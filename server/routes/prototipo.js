@@ -1,7 +1,9 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
+import { config } from '../config.js';
 import { codigoDoErro, iaDisponivel, responderSuporte, validarTurnos } from '../lib/ia.js';
 import { limitePorIp } from '../lib/limite.js';
+import { espelharDepois } from '../lib/espelho-lojas.js';
 import { CAMPOS_DO_DONO, SPLIT_MAX, SPLIT_MIN, donasDasLojas, idDaLoja, lojaDoProduto, pkeyDoArquivo } from '../lib/lojas-prototipo.js';
 import { DOMINIO_TESTE, erro, rota } from '../lib/seguranca.js';
 
@@ -30,7 +32,25 @@ export const TIPOS = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif',
 // - delivfiles (arquivos de entrega): o dono do site, ou o vendedor da loja do produto.
 // - sellers/acc-*: o dono do site; o vendedor, só o próprio documento (sem trocar a conta).
 // Contas de demonstração (sem login) não gravam nada.
-export function rotasPrototipo({ repo, pagamentos }) {
+// Links assinados dos arquivos de entrega (quando ENTREGAS_SO_PAGAS está ligado): valem 10 minutos.
+const SEGREDO_LINKS = config.supabase.secretKey
+  ? crypto.createHash('sha256').update(`links-entrega|${config.supabase.secretKey}`).digest()
+  : crypto.randomBytes(32); // sem Supabase (testes locais): muda a cada vez que o servidor liga
+const VALIDADE_LINK_MS = 10 * 60 * 1000;
+const assinar = (id, ate) => crypto.createHmac('sha256', SEGREDO_LINKS).update(`${id}|${ate}`).digest('base64url');
+export function linkAssinado(id, agora = Date.now()) {
+  const ate = agora + VALIDADE_LINK_MS;
+  return `/_blob/${id}?ate=${ate}&ass=${assinar(id, ate)}`;
+}
+function assinaturaValida(id, ate, ass, agora = Date.now()) {
+  const n = Number(ate);
+  if (!Number.isInteger(n) || n < agora || typeof ass !== 'string') return false;
+  const certo = Buffer.from(assinar(id, n));
+  const veio = Buffer.from(ass);
+  return certo.length === veio.length && crypto.timingSafeEqual(certo, veio);
+}
+
+export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entregasSoPagas }) {
   const api = Router();
   // "Versão" de cada coleção: muda a cada gravação, para o navegador saber quando buscar de novo.
   const versoes = Object.fromEntries(COLECOES.map((c) => [c, Date.now()]));
@@ -158,7 +178,10 @@ export function rotasPrototipo({ repo, pagamentos }) {
     const dados = req.body?.dados;
     if (!dados || typeof dados !== 'object' || Array.isArray(dados)) throw erro(400, 'dados inválidos');
     if (JSON.stringify(dados).length > MAX_DOC) throw erro(413, 'documento grande demais');
-    await repo.salvarDocPrototipo(c, id, await autorizar(req, 'PUT', c, id, dados));
+    const antes = (await repo.listarDocsPrototipo(c)).find((d) => d.id === id)?.dados;
+    const gravado = await autorizar(req, 'PUT', c, id, dados);
+    await repo.salvarDocPrototipo(c, id, gravado);
+    await espelharDepois(repo, c, id, antes, gravado);
     mudou(c);
     res.json({ ok: true, versao: versoes[c] });
   }));
@@ -167,7 +190,9 @@ export function rotasPrototipo({ repo, pagamentos }) {
     const c = colecao(req);
     const id = docId(req);
     await autorizar(req, 'DELETE', c, id);
+    const antes = (await repo.listarDocsPrototipo(c)).find((d) => d.id === id)?.dados;
     await repo.apagarDocPrototipo(c, id);
+    await espelharDepois(repo, c, id, antes);
     mudou(c);
     res.json({ ok: true, versao: versoes[c] });
   }));
@@ -202,6 +227,36 @@ export function rotasPrototipo({ repo, pagamentos }) {
     res.json({ ok: true });
   }));
 
+  // Arquivos de entrega: quais documentos usam este arquivo (vazio = não é entrega, ex.: logo).
+  const entregasDoArquivo = async (id) => (await repo.listarDocsPrototipo('delivfiles')).filter((d) => d.dados?.asset === id);
+  // Pode abrir o arquivo de entrega? Dono, quem enviou, o vendedor da loja ou quem pagou o produto.
+  const podeAbrir = async (u, id, entregas) => {
+    if (!u) return false;
+    if (u.papel === 'dono') return true;
+    if ((await repo.quemEnviouArquivoPrototipo(id)) === u.id) return true;
+    const donas = await donasDasLojas(repo);
+    for (const d of entregas) {
+      const pkey = pkeyDoArquivo(d.id, d.dados);
+      const lojaId = await lojaDoProduto(repo, pkey);
+      if (lojaId == null) continue;
+      if (donas[lojaId] === u.id) return true;
+      const loja = await repo.lojaPorPrototipo(lojaId);
+      const produto = loja && await repo.produtoPorPrototipo(loja.id, pkey.slice(1));
+      if (produto && await repo.clientePagouProduto(u.id, produto.id)) return true;
+    }
+    return false;
+  };
+  // O navegador pede o link de um arquivo antes de abrir. Com a trava desligada, é o link de sempre.
+  api.get('/arquivos/:id/link', rota(async (req, res) => {
+    if (!ID_ARQUIVO.test(req.params.id)) throw erro(400, 'id inválido');
+    if (!entregasSoPagas) return res.json({ url: `/_blob/${req.params.id}` });
+    const entregas = await entregasDoArquivo(req.params.id);
+    if (!entregas.length) return res.json({ url: `/_blob/${req.params.id}` });
+    const u = await usuarioDe(req);
+    if (!(await podeAbrir(u, req.params.id, entregas))) throw negar(u, 'arquivo liberado só depois do pagamento');
+    res.json({ url: linkAssinado(req.params.id) });
+  }));
+
   // IA do suporte: diz se está ligada e responde aos poucos (formato "server-sent events").
   api.get('/ia', (_req, res) => res.json({ disponivel: iaDisponivel() }));
   api.post('/ia', limitePorIp({ max: 30, janelaMs: 60 * 60 * 1000, mensagem: 'rate_limited' }), async (req, res) => {
@@ -228,11 +283,15 @@ export function rotasPrototipo({ repo, pagamentos }) {
   const blob = Router();
   blob.get('/:id', rota(async (req, res) => {
     if (!ID_ARQUIVO.test(req.params.id)) throw erro(404, 'arquivo não encontrado');
+    // Trava ligada: arquivo de entrega só abre com o link assinado (logos e imagens continuam abertos).
+    const assinado = entregasSoPagas && assinaturaValida(req.params.id, req.query.ate, req.query.ass);
+    if (entregasSoPagas && !assinado && (await entregasDoArquivo(req.params.id)).length) throw erro(403, 'arquivo liberado só depois do pagamento');
     const a = await repo.lerArquivoPrototipo(req.params.id);
     if (!a) throw erro(404, 'arquivo não encontrado');
     res.set({
       'Content-Type': a.tipo,
-      'Cache-Control': 'public, max-age=31536000, immutable', // o conteúdo de um id nunca muda
+      // o conteúdo de um id nunca muda; arquivo de entrega com a trava ligada não fica em cache compartilhado
+      'Cache-Control': assinado ? 'private, max-age=600' : 'public, max-age=31536000, immutable',
       'X-Content-Type-Options': 'nosniff',
       // Um arquivo enviado (ex.: SVG) nunca roda código no site, nem aberto sozinho numa aba.
       'Content-Security-Policy': "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox",

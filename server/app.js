@@ -4,7 +4,7 @@ import { repo as repoPadrao } from './lib/repo.js';
 import { tratarErros } from './lib/seguranca.js';
 import { criarPagamentos } from './pagamentos/index.js';
 import { rotasSaude } from './routes/saude.js';
-import { configPublica } from './routes/config-publica.js';
+import { rotaConfigPublica } from './routes/config-publica.js';
 import { rotasCotacoes, rotaRatesPrototipo } from './routes/cotacoes.js';
 import { rotasPedidos } from './routes/pedidos.js';
 import { rotasLoja } from './routes/loja.js';
@@ -20,11 +20,12 @@ const pastaPublica = fileURLToPath(new URL('../public', import.meta.url));
 
 // Monta o site. Os testes passam um banco de dados em memória.
 // limites: { desligados: true } só nos testes, que fazem muitos logins seguidos.
-export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), paginaPrototipo = montarPaginaPrototipo(), limites = {} } = {}) {
+// entregasSoPagas: os testes ligam a trava dos arquivos de entrega (no site, vem de ENTREGAS_SO_PAGAS).
+export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), paginaPrototipo = montarPaginaPrototipo(), limites = {}, entregasSoPagas } = {}) {
   const app = express();
   const deps = { repo, pagamentos };
   const teste = rotasTeste(deps);
-  const prototipo = rotasPrototipo(deps);
+  const prototipo = rotasPrototipo({ ...deps, ...(entregasSoPagas !== undefined ? { entregasSoPagas } : {}) });
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // o Render fica na frente: o IP do visitante vem no cabeçalho
   app.locals.pagamentos = pagamentos;
@@ -38,7 +39,7 @@ export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), pa
 
   app.get('/api/vivo', (_req, res) => res.json({ ok: true })); // usado pelo Render para saber se está de pé
   app.use('/api/saude', rotasSaude(deps));
-  app.use('/api/config', configPublica);
+  app.use('/api/config', rotaConfigPublica(entregasSoPagas !== undefined ? { entregasSoPagas } : {}));
   app.use('/api/cotacoes', rotasCotacoes(deps));
   app.use('/api/rates', rotaRatesPrototipo(deps)); // formato que o protótipo espera (RATES_URL)
   app.use('/api/pedidos', rotasPedidos(deps));

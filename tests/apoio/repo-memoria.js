@@ -73,6 +73,33 @@ export function criarRepoMemoria() {
     async produto(id) { return copia(t.produtos[id]); },
     async loja(id) { return copia(t.lojas[id]); },
     async lojaDoVendedor(vendedorId) { return copia(Object.values(t.lojas).find((l) => l.vendedor_id === vendedorId)); },
+    async lojaPorPrototipo(pid) { return copia(Object.values(t.lojas).find((l) => l.prototipo_id === pid)); },
+    async produtoPorPrototipo(lojaId, pid) { return copia(Object.values(t.produtos).find((p) => p.loja_id === lojaId && p.prototipo_id === pid)); },
+    async salvarLojaEspelho(loja, produtos) {
+      if (loja.vendedor_id) {
+        for (const l of Object.values(t.lojas)) if (l.vendedor_id === loja.vendedor_id && l.prototipo_id !== loja.prototipo_id) Object.assign(l, { vendedor_id: null, publicada: false });
+      }
+      let l = Object.values(t.lojas).find((x) => x.prototipo_id === loja.prototipo_id);
+      if (!l) { l = { id: crypto.randomUUID(), porcentagem_vendedor: 50 }; t.lojas[l.id] = l; }
+      Object.assign(l, loja, { slug: `loja-p${loja.prototipo_id}` });
+      const ids = new Set(produtos.map((p) => p.prototipo_id));
+      for (const p of produtos) {
+        let x = Object.values(t.produtos).find((y) => y.loja_id === l.id && y.prototipo_id === p.prototipo_id);
+        if (!x) { x = { id: crypto.randomUUID() }; t.produtos[x.id] = x; }
+        Object.assign(x, p, { loja_id: l.id, ativo: true });
+      }
+      for (const x of Object.values(t.produtos)) if (x.loja_id === l.id && !ids.has(x.prototipo_id)) x.ativo = false;
+      return copia(l);
+    },
+    async desativarLojaEspelho(pid) {
+      const l = Object.values(t.lojas).find((x) => x.prototipo_id === pid);
+      if (!l) return;
+      l.publicada = false;
+      for (const x of Object.values(t.produtos)) if (x.loja_id === l.id) x.ativo = false;
+    },
+    async clientePagouProduto(clienteId, produtoId) {
+      return Object.values(t.pedidos).some((p) => p.cliente_id === clienteId && p.produto_id === produtoId && ['pago', 'entregue', 'concluido', 'reembolso_solicitado'].includes(p.status));
+    },
     async dadosRecebimento(lojaId) { return copia(t.dadosRecebimento[lojaId]); },
     async salvarDadosRecebimento(linha) { t.dadosRecebimento[linha.loja_id] = { ...linha }; return copia(linha); },
 

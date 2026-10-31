@@ -7,6 +7,8 @@ import { config } from '../config.js';
 import { supabaseAdmin } from './supabase.js';
 
 const PASTA = 'prototipo'; // pasta do Storage com os arquivos do protótipo
+// Situações de pedido em que o cliente já pagou (e pode receber os arquivos de entrega).
+export const STATUS_PAGOS = ['pago', 'entregue', 'concluido', 'reembolso_solicitado'];
 
 function db() {
   if (!supabaseAdmin) throw Object.assign(new Error('Supabase não configurado'), { status: 503 });
@@ -142,6 +144,41 @@ export const repo = {
   async lojaDoVendedor(vendedorId) {
     return checar(await db().from('lojas').select('*').eq('vendedor_id', vendedorId).maybeSingle());
   },
+  // ---------- cópia das lojas do protótipo nas tabelas reais (server/lib/espelho-lojas.js) ----------
+  async lojaPorPrototipo(prototipoId) {
+    return checar(await db().from('lojas').select('*').eq('prototipo_id', prototipoId).maybeSingle());
+  },
+  async produtoPorPrototipo(lojaId, prototipoId) {
+    return checar(await db().from('produtos').select('*').eq('loja_id', lojaId).eq('prototipo_id', prototipoId).maybeSingle());
+  },
+  // Cria ou atualiza a loja e os produtos dela; produtos que sumiram ficam inativos.
+  async salvarLojaEspelho(loja, produtos) {
+    if (loja.vendedor_id) {
+      // o vendedor só tem uma loja: uma cópia antiga com outro id deixa de ser dele
+      checar(await db().from('lojas').update({ vendedor_id: null, publicada: false })
+        .eq('vendedor_id', loja.vendedor_id).neq('prototipo_id', loja.prototipo_id));
+    }
+    const l = checar(await db().from('lojas').upsert({ ...loja, slug: `loja-p${loja.prototipo_id}` }, { onConflict: 'prototipo_id' }).select().single());
+    if (produtos.length) {
+      checar(await db().from('produtos').upsert(produtos.map((p) => ({ ...p, loja_id: l.id, ativo: true })), { onConflict: 'loja_id,prototipo_id' }));
+    }
+    const ids = produtos.map((p) => p.prototipo_id);
+    let q = db().from('produtos').update({ ativo: false }).eq('loja_id', l.id);
+    if (ids.length) q = q.not('prototipo_id', 'in', `(${ids.map((i) => `"${String(i).replace(/"/g, '')}"`).join(',')})`);
+    checar(await q);
+    return l;
+  },
+  async desativarLojaEspelho(prototipoId) {
+    const l = checar(await db().from('lojas').update({ publicada: false }).eq('prototipo_id', prototipoId).select().maybeSingle());
+    if (l) checar(await db().from('produtos').update({ ativo: false }).eq('loja_id', l.id));
+  },
+  // Pedidos pagos de um cliente para um produto (libera os arquivos de entrega).
+  async clientePagouProduto(clienteId, produtoId) {
+    const linhas = checar(await db().from('pedidos').select('id').eq('cliente_id', clienteId).eq('produto_id', produtoId)
+      .in('status', STATUS_PAGOS).limit(1));
+    return linhas.length > 0;
+  },
+
   async dadosRecebimento(lojaId) {
     return checar(await db().from('dados_recebimento').select('*').eq('loja_id', lojaId).maybeSingle());
   },

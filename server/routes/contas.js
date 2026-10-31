@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
+import { espelharDepois } from '../lib/espelho-lojas.js';
 import { limitePorIp } from '../lib/limite.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
 
@@ -137,6 +138,7 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {}, limit
       if (d.dados?.acc?.userId === id) {
         await repo.apagarDocPrototipo('sellers', d.id);
         mudouPrototipo('sellers');
+        await espelharDepois(repo, 'sellers', d.id, d.dados);
       }
     }
     res.json(await repo.excluirConta(id));
