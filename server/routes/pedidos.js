@@ -29,6 +29,33 @@ export function rotasPedidos({ repo, pagamentos }) {
     return novo;
   }
 
+  // Antes do checkout: o produto (da loja do protótipo) pode ser comprado de verdade? Quanto em reais?
+  // Lojas sem vendedor (do dono), sem dados de recebimento ou a própria loja usam a compra de
+  // demonstração do protótipo (motivo diz por quê).
+  r.get('/preco', rota(async (req, res) => {
+    const lojaPid = Number(req.query.loja);
+    const loja = Number.isInteger(lojaPid) ? await repo.lojaPorPrototipo(lojaPid) : null;
+    const produto = loja && await repo.produtoPorPrototipo(loja.id, String(req.query.produto || ''));
+    const nao = (motivo) => res.json({ pode: false, motivo });
+    if (!produto?.ativo || !loja.publicada || loja.banida) return nao('indisponivel');
+    if (!loja.vendedor_id) return nao('sem_vendedor');
+    if (loja.vendedor_id === req.usuario.id) return nao('propria_loja');
+    const recebimento = await repo.dadosRecebimento(loja.id);
+    if (!recebimento || recebimento.situacao !== 'pronto' || recebimento.provedor !== pagamentos.provedor) return nao('sem_recebimento');
+    const brl = (await repo.ultimasCotacoes()).find((c) => c.moeda === 'BRL');
+    if (!brl) return nao('sem_cotacao');
+    res.json({
+      pode: true,
+      produtoId: produto.id,
+      titulo: produto.titulo,
+      valorKn: produto.preco_kn,
+      valorCentavos: knParaCentavos(produto.preco_kn, brl.taxa),
+      cotacao: { brl: Number(brl.taxa), data: brl.data },
+      formas: pagamentos.formas,
+      simulado: pagamentos.provedor === 'simulado',
+    });
+  }));
+
   // Cliente compra um produto: cria o pedido e a cobrança com o split no valor exato.
   // A divisão usa a porcentagem da loja (padrão 50/50), congelada no pedido.
   r.post('/', rota(async (req, res) => {

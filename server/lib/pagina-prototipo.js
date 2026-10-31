@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 const ARQUIVO = new URL('../../kennismarket-prototipo.html', import.meta.url);
 
 export const AJUSTES = [
-  { nome: 'ponte', de: /<head>/, para: '<head><script src="/js/ponte-claude.js"></script><script src="/js/contas.js"></script>' },
+  { nome: 'ponte', de: /<head>/, para: '<head><script src="/js/ponte-claude.js"></script><script src="/js/contas.js"></script><script src="/js/checkout.js"></script>' },
   { nome: 'ícone da aba', de: /<head>/, para: '<head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">' },
   { nome: 'links de convite', de: /const SITE_URL="[^"]*";/, para: 'const SITE_URL=location.origin+"/";' },
   { nome: 'cotações', de: /var RATES_URL="[^"]*";/, para: 'var RATES_URL="/api/rates";' },

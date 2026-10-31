@@ -30,7 +30,7 @@
 | 0e | Versão de demonstração: o site é o protótipo, com lojas, PDFs, convites e contas no Supabase | feito |
 | 1 | Cadastro e login (Supabase), perfis de cliente e vendedor | feito (falta: recuperar senha do cliente por e-mail) |
 | 2 | Lojas e produtos (com lojas e avaliações de mentira na versão de testes), upload de arquivos | feito: lojas seguras, cópia nas tabelas reais, porcentagem por loja no pedido; trava "arquivos só para quem pagou" pronta, a ligar com o checkout |
-| 3 | Tela de checkout no site (o servidor de pagamento já está pronto, com o simulado) | |
+| 3 | Tela de checkout no site (o servidor de pagamento já está pronto, com o simulado) | feito com o pagamento simulado (um produto por vez; vendedor cadastra o Pix). Falta: provedor real da Transfeera (etapa 0d), comprar vários produtos/tradução e pagar a proposta do chat (com a etapa 5) |
 | 4 | Telas de pedidos, entrega e reembolso + painel do suporte | |
 | 5 | Chat cliente ↔ vendedor | |
 | 6 | Painel do vendedor com o valor a receber | |

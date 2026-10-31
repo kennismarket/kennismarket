@@ -271,3 +271,28 @@ test('pedido: a divisão usa a porcentagem da loja, congelada no pedido', async 
   assert.equal(await gravar('PUT', 'stores/s6400', lojaCompleta(6400, { split: 40 }), dono), 200);
   assert.equal(repo.tabelas.pedidos[pedido.id].vendedor_centavos, 42000);
 });
+
+test('checkout: /api/pedidos/preco diz se a compra é de verdade e quanto custa', async () => {
+  const olga = await vendedor('olgatok1', 'olga_v');
+  assert.equal(await gravar('PUT', 'stores/s6500', lojaCompleta(6500), olga.t), 200);
+  assert.equal(await gravar('PUT', 'stores/s6600', lojaCompleta(6600), dono), 200); // loja do dono, sem vendedor
+  await repo.salvarCotacoes([{ data: '2026-10-30', moeda: 'BRL', taxa: 6, fonte: 'bce' }]);
+  const preco = async (loja, produto, token = cliente) => {
+    const r = await fetch(`${base}/api/pedidos/preco?loja=${loja}&produto=${produto}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    return { s: r.status, j: await r.json() };
+  };
+  assert.equal((await preco(6500, 'a6500', null)).s, 401);
+  assert.equal((await preco(6500, 'a6500')).j.motivo, 'sem_recebimento');
+  assert.equal((await preco(6600, 'a6600')).j.motivo, 'sem_vendedor');
+  assert.equal((await preco(6500, 'nao-existe')).j.motivo, 'indisponivel');
+  await fetch(`${base}/api/loja/recebimento`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${olga.t}` },
+    body: JSON.stringify({ nome: 'Olga Lima', cpfCnpj: '529.982.247-25', pix: { chave: 'olga@ex.com', tipo: 'email' } }) });
+  assert.equal((await preco(6500, 'a6500', olga.t)).j.motivo, 'propria_loja');
+  const ok = (await preco(6500, 'a6500')).j;
+  assert.equal(ok.pode, true);
+  assert.equal(ok.valorKn, 100);
+  assert.equal(ok.valorCentavos, 60000);
+  assert.deepEqual(ok.formas, ['pix', 'boleto']);
+  assert.equal(ok.simulado, true);
+  assert.ok(ok.produtoId);
+});

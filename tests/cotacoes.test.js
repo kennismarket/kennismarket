@@ -63,7 +63,8 @@ test('sem a tarefa do GitHub, o próprio site busca as cotações quando faltam 
     assert.equal(r.rates.BRL, 5.66);
     // velha (antes de anteontem): busca de novo, mas no máximo a cada 6 horas
     estado.dia = '2026-10-28';
-    const depois = Date.parse('2026-10-31T12:00:00Z');
+    // horários relativos a agora (a primeira busca acima foi agora): 7h depois já pode buscar de novo
+    const depois = Date.now() + 7 * 3600 * 1000;
     await cot.garantirCotacoes(repo2, depois);
     assert.equal(cot.montarTabela(await repo2.ultimasCotacoes()).data, '2026-10-28');
     estado.dia = '2026-10-29';
