@@ -188,5 +188,11 @@ do $$ begin
   assert (select usuario from perfis where id = '00000000-0000-0000-0000-00000000000c') is null, 'contas antigas podem ficar sem nome de usuário';
 end $$;
 
+-- 0005: arquivo guarda quem enviou; apagar a conta não apaga o arquivo
+do $$ begin
+  insert into prototipo_arquivos (id, tipo, tamanho, enviado_por) values (repeat('a', 32), 'application/pdf', 10, '00000000-0000-0000-0000-00000000000b');
+  assert (select enviado_por from prototipo_arquivos where id = repeat('a', 32)) = '00000000-0000-0000-0000-00000000000b', 'guarda quem enviou';
+end $$;
+
 rollback;
 \echo 'BANCO: todas as verificações passaram'

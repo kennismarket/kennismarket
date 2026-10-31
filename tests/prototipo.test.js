@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { criarRepoMemoria } from './apoio/repo-memoria.js';
 
-let repo, base, servidor, montarPaginaPrototipo;
+let repo, base, servidor, montarPaginaPrototipo, tokenDono;
 
 before(async () => {
   delete process.env.ANTHROPIC_API_KEY;
@@ -17,11 +17,14 @@ before(async () => {
   repo = criarRepoMemoria();
   servidor = criarApp({ repo }).listen(0);
   base = `http://localhost:${servidor.address().port}`;
+  tokenDono = (await repo.prepararDadosTeste()).tokens.dono;
 });
 after(() => servidor.close());
 
-const pedir = async (metodo, caminho, corpo, tipo = 'application/json') => {
-  const r = await fetch(base + caminho, { method: metodo, headers: corpo !== undefined ? { 'Content-Type': tipo } : {}, body: corpo });
+// Grava como dono do site (desde a etapa 2, sem login nada é gravado).
+const pedir = async (metodo, caminho, corpo, tipo = 'application/json', token = tokenDono) => {
+  const headers = { ...(corpo !== undefined ? { 'Content-Type': tipo } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  const r = await fetch(base + caminho, { method: metodo, headers, body: corpo });
   const texto = r.headers.get('content-type')?.includes('json') ? await r.json() : Buffer.from(await r.arrayBuffer());
   return { s: r.status, j: texto, h: r.headers };
 };
@@ -59,7 +62,8 @@ test('db: coleções com versão, gravar e apagar documentos', async () => {
   assert.equal((await pedir('PUT', '/api/prototipo/docs/stores/s1001', JSON.stringify({ dados: { store: { id: 1001, n: 'Loja' } } }))).s, 200);
   const v2 = await pedir('GET', `/api/prototipo/colecoes/stores?versao=${v1.j.versao}`);
   assert.notEqual(v2.j.versao, v1.j.versao);
-  assert.deepEqual(v2.j.docs, [{ id: 's1001', dados: { store: { id: 1001, n: 'Loja' } } }]);
+  // o servidor guarda junto de quem é a loja (aqui, do dono do site: sem dona) e se está banida
+  assert.deepEqual(v2.j.docs, [{ id: 's1001', dados: { store: { id: 1001, n: 'Loja' }, contaDona: null, banida: false } }]);
 
   assert.equal((await pedir('DELETE', '/api/prototipo/docs/stores/s1001')).s, 200);
   assert.deepEqual((await pedir('GET', '/api/prototipo/colecoes/stores')).j.docs, []);
@@ -115,7 +119,7 @@ test('importação: envia os arquivos, troca os ids nos documentos e grava as tr
     writeFileSync(join(pasta, 'stores', 's2001.json'), JSON.stringify({ store: { id: 2001, n: 'Importada', logo: null }, ts: 1 }));
     writeFileSync(join(pasta, 'delivfiles', 'pf-x-en.json'), JSON.stringify({ asset: antigo, ext: 'pdf', lg: 'en', name: 'Guia.pdf' }));
     writeFileSync(join(pasta, 'sellers', 'acc-abc.json'), JSON.stringify({ acc: { token: 'abc', username: 'ana' } }));
-    const { stdout } = await promisify(execFile)(process.execPath, ['scripts/importar-prototipo.mjs', pasta, base]);
+    const { stdout } = await promisify(execFile)(process.execPath, ['scripts/importar-prototipo.mjs', pasta, base], { env: { ...process.env, KM_TOKEN: tokenDono } });
     assert.match(stdout, /1 arquivos enviados/);
 
     const entrega = (await pedir('GET', '/api/prototipo/colecoes/delivfiles')).j.docs.find((d) => d.id === 'pf-x-en');
@@ -164,8 +168,9 @@ test('db: criar e apagar convites, configuração e apagar vendedores exigem don
   assert.equal((await gravar('PUT', 'stores/inv-abc12345', convite)).status, 401);
   assert.equal((await gravar('PUT', 'stores/inv-abc12345', convite, tokens.cliente)).status, 403);
   assert.equal((await gravar('PUT', 'stores/inv-abc12345', convite, tokens.dono)).status, 200);
-  // usar o convite (marcar como usado) continua aberto: o vendedor ainda não tem login no site
-  assert.equal((await gravar('PUT', 'stores/inv-abc12345', { invite: { ...convite.invite, used: true } })).status, 200);
+  // atualizar um convite que já existe: precisa de login (o servidor marca o uso na criação da conta)
+  assert.equal((await gravar('PUT', 'stores/inv-abc12345', { invite: { ...convite.invite, used: true } })).status, 401);
+  assert.equal((await gravar('PUT', 'stores/inv-abc12345', { invite: { ...convite.invite, used: true } }, tokens.vendedor)).status, 200);
   // apagar convite: só o dono
   assert.equal((await gravar('DELETE', 'stores/inv-abc12345')).status, 401);
   assert.equal((await gravar('DELETE', 'stores/inv-abc12345', null, tokens.dono)).status, 200);
@@ -174,12 +179,15 @@ test('db: criar e apagar convites, configuração e apagar vendedores exigem don
   assert.equal((await gravar('PUT', 'stores/cfg-support', { cfg: { supportEmail: 'x@ex.nl' } })).status, 401);
   assert.equal((await gravar('PUT', 'stores/cfg-support', { cfg: { supportEmail: 'x@ex.nl' } }, tokens.dono)).status, 200);
 
-  // contas de vendedor: criar continua aberto (pelo convite); apagar, só o dono
-  assert.equal((await gravar('PUT', 'sellers/acc-abc12345', { acc: { username: 'v' } })).status, 200);
+  // contas de vendedor: criar só pelo servidor (/api/contas/vendedor) ou pelo dono; apagar, só o dono
+  assert.equal((await gravar('PUT', 'sellers/acc-abc12345', { acc: { username: 'v' } })).status, 401);
+  assert.equal((await gravar('PUT', 'sellers/acc-abc12345', { acc: { username: 'v' } }, tokens.vendedor)).status, 403);
+  assert.equal((await gravar('PUT', 'sellers/acc-abc12345', { acc: { username: 'v' } }, tokens.dono)).status, 200);
   assert.equal((await gravar('DELETE', 'sellers/acc-abc12345', null, tokens.vendedor)).status, 403);
   assert.equal((await gravar('DELETE', 'sellers/acc-abc12345', null, tokens.dono)).status, 200);
 
-  // lojas continuam abertas como no protótipo
-  assert.equal((await gravar('PUT', 'stores/s4242', { store: { id: 4242 } })).status, 200);
-  assert.equal((await gravar('DELETE', 'stores/s4242')).status, 200);
+  // lojas: sem login não grava (etapa 2); o dono grava
+  assert.equal((await gravar('PUT', 'stores/s4242', { store: { id: 4242 } })).status, 401);
+  assert.equal((await gravar('PUT', 'stores/s4242', { store: { id: 4242 } }, tokens.dono)).status, 200);
+  assert.equal((await gravar('DELETE', 'stores/s4242', null, tokens.dono)).status, 200);
 });

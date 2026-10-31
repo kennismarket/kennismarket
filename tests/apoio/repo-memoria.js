@@ -141,8 +141,9 @@ export function criarRepoMemoria() {
     async salvarDocPrototipo(colecao, id, dados) { (t.docs[colecao] ||= {})[id] = structuredClone(dados); },
     async apagarDocPrototipo(colecao, id) { if (t.docs[colecao]) delete t.docs[colecao][id]; },
     async espacoUsadoPrototipo() { return Object.values(t.arquivos).reduce((s, a) => s + a.conteudo.length, 0); },
-    async salvarArquivoPrototipo(id, tipo, conteudo) { t.arquivos[id] = { tipo, conteudo: Buffer.from(conteudo) }; },
-    async lerArquivoPrototipo(id) { return t.arquivos[id] ? { ...t.arquivos[id] } : null; },
+    async salvarArquivoPrototipo(id, tipo, conteudo, enviadoPor = null) { t.arquivos[id] = { tipo, conteudo: Buffer.from(conteudo), enviadoPor }; },
+    async quemEnviouArquivoPrototipo(id) { return t.arquivos[id]?.enviadoPor || null; },
+    async lerArquivoPrototipo(id) { return t.arquivos[id] ? { tipo: t.arquivos[id].tipo, conteudo: t.arquivos[id].conteudo } : null; },
     async apagarArquivoPrototipo(id) { delete t.arquivos[id]; },
     async prepararDadosTeste() {
       const contas = { cliente: 'Cliente de Teste', vendedor: 'Vendedora de Teste', dono: 'Dono de Teste' };

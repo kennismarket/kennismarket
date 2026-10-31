@@ -44,7 +44,7 @@ export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), pa
   app.use('/api/pedidos', rotasPedidos(deps));
   app.use('/api/loja', rotasLoja(deps));
   app.use('/api/contas', rotasContas({ ...deps, mudouPrototipo: prototipo.mudou, limites }));
-  app.use('/api/admin', rotasAdmin(deps));
+  app.use('/api/admin', rotasAdmin({ ...deps, mudouPrototipo: prototipo.mudou }));
   app.use('/api/tarefas', rotasTarefas(deps));
   app.use('/api/teste', teste.api);
   app.use('/api/prototipo', prototipo.api);
