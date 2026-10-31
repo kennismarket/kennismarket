@@ -422,9 +422,33 @@
     }
   }, true);
 
+  // Arquivos de entrega só para quem pagou (ENTREGAS_SO_PAGAS no servidor): o protótipo abre os
+  // arquivos no visualizador dele (openViewer). Com a trava ligada, antes de abrir, o visualizador
+  // pede ao servidor um link assinado (10 minutos), que só sai para quem pode abrir. Desligada, nada muda.
+  var TXT3 = { nl: 'Dit bestand komt vrij na betaling.', en: 'This file is available after payment.', es: 'Este archivo se libera después del pago.', pt: 'Este arquivo é liberado depois do pagamento.' };
+  function travarVisualizador() {
+    var abrir = window.openViewer;
+    if (typeof abrir !== 'function') return;
+    window.openViewer = async function (href, nome) {
+      var id = (String(href).match(/^\/_blob\/([0-9a-f]{32})$/) || [])[1];
+      if (!id || !cfg || !cfg.entregasSoPagas) return abrir.apply(this, arguments);
+      try {
+        var t = await window.kmToken();
+        var r = await fetch('/api/prototipo/arquivos/' + id + '/link', { headers: t ? { Authorization: 'Bearer ' + t } : {} });
+        if (!r.ok) throw new Error('bloqueado');
+        return abrir.call(this, (await r.json()).url, nome);
+      } catch (x) {
+        var lg = (typeof S !== 'undefined' && S.lang) || 'nl';
+        if (typeof toast === 'function') toast(TXT3[lg] || TXT3.nl);
+      }
+    };
+  }
+
   aplicarPerfil(null);
+  config().catch(function () {}); // já busca a configuração (trava dos arquivos)
   document.addEventListener('DOMContentLoaded', function () {
     ligarTelas();
+    travarVisualizador();
     conferir();
   });
 })();

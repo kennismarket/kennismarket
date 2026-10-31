@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
 import { debitoDoVendedor } from '../lib/dinheiro.js';
+import { espelharLoja, espelharTodas } from '../lib/espelho-lojas.js';
 import { donasDasLojas, idDaLoja } from '../lib/lojas-prototipo.js';
 import { erro, exigirDono, exigirUsuario, rota } from '../lib/seguranca.js';
 
@@ -11,6 +12,10 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
 
   // Confere o login do dono (a tela de login da administração usa isto).
   r.get('/eu', (req, res) => res.json({ email: req.usuario.email, nome: req.usuario.nome, papel: req.usuario.papel }));
+
+  // Copia de novo todas as lojas do protótipo para as tabelas reais (o servidor já faz isso
+  // sozinho a cada gravação e ao ligar; isto serve para conferir ou consertar).
+  r.post('/lojas/copiar', rota(async (_req, res) => res.json(await espelharTodas(repo))));
 
   // ---------- contas (seção "Contas" do painel do dono) ----------
   // Busca por nome, usuário ou e-mail. O e-mail interno (sem e-mail) não aparece.
@@ -63,6 +68,7 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
         vendedores++;
       }
       if (vendedores) mudouPrototipo('sellers');
+      for (const id of lojas) await espelharLoja(repo, id);
     }
     res.json({ ok: true, banida: banir, lojas });
   }));

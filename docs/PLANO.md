@@ -29,7 +29,7 @@
 | 0d | Provedor real da Transfeera (sandbox), quando chegar a documentação e as credenciais | aguardando documentação |
 | 0e | Versão de demonstração: o site é o protótipo, com lojas, PDFs, convites e contas no Supabase | feito |
 | 1 | Cadastro e login (Supabase), perfis de cliente e vendedor | feito (falta: recuperar senha do cliente por e-mail) |
-| 2 | Lojas e produtos (com lojas e avaliações de mentira na versão de testes), upload de arquivos | em andamento: lojas seguras (dono de cada loja, porcentagem por loja, banir) feito; falta copiar para as tabelas reais e liberar os arquivos só para quem pagou, junto com o checkout |
+| 2 | Lojas e produtos (com lojas e avaliações de mentira na versão de testes), upload de arquivos | feito: lojas seguras, cópia nas tabelas reais, porcentagem por loja no pedido; trava "arquivos só para quem pagou" pronta, a ligar com o checkout |
 | 3 | Tela de checkout no site (o servidor de pagamento já está pronto, com o simulado) | |
 | 4 | Telas de pedidos, entrega e reembolso + painel do suporte | |
 | 5 | Chat cliente ↔ vendedor | |

@@ -36,3 +36,12 @@ test('recusa valores inválidos', () => {
   assert.throws(() => knParaCentavos(1.5, 6));
   assert.throws(() => knParaCentavos(10, 0));
 });
+
+test('divisão com a porcentagem da loja (10% a 90% para o vendedor)', () => {
+  assert.deepEqual(dividirVenda(10000, 70), { vendedor: 7000, plataforma: 3000 });
+  assert.deepEqual(dividirVenda(10000, 10), { vendedor: 1000, plataforma: 9000 });
+  assert.deepEqual(dividirVenda(333, 70), { vendedor: 234, plataforma: 99 }); // centavo quebrado fica com o vendedor
+  assert.throws(() => dividirVenda(10000, 95));
+  assert.throws(() => dividirVenda(10000, 5));
+  assert.throws(() => dividirVenda(10000, 50.5));
+});

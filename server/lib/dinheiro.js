@@ -1,10 +1,13 @@
 // Regras de dinheiro. Valores em reais são sempre em CENTAVOS (número inteiro),
 // para nunca ter erro de arredondamento com casas decimais.
 
-// Decisão dos donos: toda venda é dividida 50/50 entre vendedor e Kennismarket,
-// sobre o valor cheio cobrado do cliente. A taxa do banco sai da parte do Kennismarket.
+// Decisão dos donos: a venda é dividida entre vendedor e Kennismarket sobre o valor cheio
+// cobrado do cliente; padrão 50/50, e o dono ajusta por loja (10% a 90% para o vendedor).
+// A taxa do banco sai da parte do Kennismarket.
 export const PORCENTAGEM_VENDEDOR = 50;
 export const PORCENTAGEM_PLATAFORMA = 100 - PORCENTAGEM_VENDEDOR;
+export const PORCENTAGEM_VENDEDOR_MIN = 10;
+export const PORCENTAGEM_VENDEDOR_MAX = 90;
 
 // 1 KN Coin = 1 euro. O preço em reais usa a cotação do euro do dia.
 export function knParaCentavos(kn, cotacaoBrl) {
@@ -15,9 +18,11 @@ export function knParaCentavos(kn, cotacaoBrl) {
 }
 
 // O centavo quebrado fica com o vendedor, e a soma bate exatamente com o total.
-export function dividirVenda(totalCentavos) {
+export function dividirVenda(totalCentavos, porcentagemVendedor = PORCENTAGEM_VENDEDOR) {
   if (!Number.isInteger(totalCentavos) || totalCentavos <= 0) throw new Error('Valor inválido');
-  const plataforma = Math.floor((totalCentavos * PORCENTAGEM_PLATAFORMA) / 100);
+  const pv = Number(porcentagemVendedor);
+  if (!Number.isInteger(pv) || pv < PORCENTAGEM_VENDEDOR_MIN || pv > PORCENTAGEM_VENDEDOR_MAX) throw new Error('Porcentagem do vendedor inválida');
+  const plataforma = Math.floor((totalCentavos * (100 - pv)) / 100);
   return { vendedor: totalCentavos - plataforma, plataforma };
 }
 

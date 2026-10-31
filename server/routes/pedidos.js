@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
 import { documentoValido } from '../lib/documentos.js';
-import { dividirVenda, knParaCentavos, PORCENTAGEM_PLATAFORMA } from '../lib/dinheiro.js';
+import { dividirVenda, knParaCentavos, PORCENTAGEM_VENDEDOR } from '../lib/dinheiro.js';
 import { recebedorDaLinha } from '../lib/recebimento.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
 
@@ -29,7 +29,8 @@ export function rotasPedidos({ repo, pagamentos }) {
     return novo;
   }
 
-  // Cliente compra um produto: cria o pedido e a cobrança com o split (50/50) no valor exato.
+  // Cliente compra um produto: cria o pedido e a cobrança com o split no valor exato.
+  // A divisão usa a porcentagem da loja (padrão 50/50), congelada no pedido.
   r.post('/', rota(async (req, res) => {
     const { produtoId, formaPagamento, cpfCnpj, moedaExibida } = req.body || {};
     if (!pagamentos.formas.includes(formaPagamento)) throw erro(400, `formaPagamento: ${pagamentos.formas.join(', ')}`);
@@ -51,7 +52,8 @@ export function rotasPedidos({ repo, pagamentos }) {
     if (!brl) throw erro(503, 'ainda sem cotação do euro salva');
     const exibida = moedaExibida ? String(moedaExibida).toUpperCase() : null;
     const valorCentavos = knParaCentavos(produto.preco_kn, brl.taxa);
-    const { vendedor, plataforma } = dividirVenda(valorCentavos);
+    const porcentagemVendedor = loja.porcentagem_vendedor ?? PORCENTAGEM_VENDEDOR;
+    const { vendedor, plataforma } = dividirVenda(valorCentavos, porcentagemVendedor);
 
     const pedido = await repo.criarPedido({
       id: crypto.randomUUID(),
@@ -64,7 +66,7 @@ export function rotasPedidos({ repo, pagamentos }) {
       moeda_exibida: exibida,
       cotacao_exibida: exibida === 'EUR' ? 1 : Number(cotacoes.find((c) => c.moeda === exibida)?.taxa) || null,
       valor_centavos: valorCentavos,
-      taxa_percentual: PORCENTAGEM_PLATAFORMA,
+      taxa_percentual: 100 - porcentagemVendedor,
       vendedor_centavos: vendedor,
       plataforma_centavos: plataforma,
       forma_pagamento: formaPagamento,
