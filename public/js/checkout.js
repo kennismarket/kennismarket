@@ -82,24 +82,29 @@
     }
     function tela1(o) {
       o.querySelector('.sheet').innerHTML = '<h2>' + t('t') + '</h2><p class="sub">' + t('d') + '</p>' + linha +
-        '<div class="field"><label for="ck-doc">' + t('doc') + '</label><input id="ck-doc" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00"></div>' +
         '<div class="methods3" role="group" aria-label="' + tr('payMethod') + '">' + metodos() + '</div>' +
+        // CPF/CNPJ só aparece no boleto (decisão dos donos); no Pix não é pedido
+        (forma === 'boleto' ? '<div class="field"><label for="ck-doc">' + t('doc') + '</label><input id="ck-doc" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00"></div>' : '') +
         '<div class="callout">' + icon('shield', 18) + '<span>' + t('protecao') + '</span></div>' +
         '<p class="err" id="ck-err"></p>' +
         '<button class="btn primary block" id="ck-go">' + (forma === 'boleto' ? t('genBoleto') : t('genPix')) + ' · ' + reais(preco.valorCentavos) + '</button>' +
         '<button class="btn block" data-a="close">' + tr('cancelB') + '</button>';
       o.querySelectorAll('.method:not([disabled])').forEach(function (b) {
-        b.onclick = function () { var d = o.querySelector('#ck-doc').value; forma = b.dataset.m; tela1(o); o.querySelector('#ck-doc').value = d; };
+        b.onclick = function () {
+          var campo = o.querySelector('#ck-doc'), d = campo ? campo.value : '';
+          forma = b.dataset.m; tela1(o);
+          if (o.querySelector('#ck-doc')) o.querySelector('#ck-doc').value = d;
+        };
       });
       o.querySelector('#ck-go').onclick = async function () {
-        var doc = o.querySelector('#ck-doc').value.replace(/\D/g, ''), err = o.querySelector('#ck-err'), btn = this;
-        if (doc.length !== 11 && doc.length !== 14) return (err.textContent = t('docErr'));
+        var campo = o.querySelector('#ck-doc'), doc = campo ? campo.value.replace(/\D/g, '') : '', err = o.querySelector('#ck-err'), btn = this;
+        if (forma === 'boleto' && doc.length !== 11 && doc.length !== 14) return (err.textContent = t('docErr'));
         btn.disabled = true; err.textContent = '';
         try {
           var pedido = preco.demo
             ? { id: null, valorCentavos: preco.valorCentavos, pix: { copiaECola: '00020126KENNISMARKET-DEMO-' + Date.now().toString(36).toUpperCase() },
                 boleto: { linhaDigitavel: '00190.00009 01234.567890 12345.678901 1 ' + String(preco.valorCentavos).padStart(14, '0') } }
-            : await api('POST', '/api/pedidos', { produtoId: preco.produtoId, formaPagamento: forma, cpfCnpj: doc, moedaExibida: 'BRL' });
+            : await api('POST', '/api/pedidos', Object.assign({ produtoId: preco.produtoId, formaPagamento: forma, moedaExibida: 'BRL' }, forma === 'boleto' ? { cpfCnpj: doc } : {}));
           tela2(o, pedido);
         } catch (x) {
           err.textContent = x.status === 400 ? t('docErr') : (x.message && x.status < 500 ? x.message : t('falha'));
