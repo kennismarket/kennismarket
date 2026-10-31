@@ -31,7 +31,7 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 - Processador: **Transfeera**. O Kennismarket abre já com **CNPJ** (Kennismarket Ltda), então o Pix mostra o nome da empresa, nunca o dos donos.
 - **Split instantâneo** por Pix e boleto: a divisão vai na própria cobrança (QR Code/boleto). A parte do vendedor é repassada **na hora**, junto com o pagamento. **Não existe retenção** de dinheiro.
 - O vendedor **não precisa de conta na Transfeera**: recebe pelo CPF/CNPJ + chave Pix ou dados bancários (campos exatos a confirmar na documentação).
-- Divisão: **50/50 em todas as vendas**, sobre o **valor cheio** cobrado do cliente. A taxa da Transfeera sai da parte do Kennismarket (confirmar na documentação como configurar).
+- Divisão: **50/50 por padrão**, sobre o **valor cheio** cobrado do cliente. **O dono pode definir uma porcentagem diferente para cada loja** (de 10% a 90% para o vendedor, como no painel do protótipo; decisão dos donos). A porcentagem usada fica congelada no pedido na hora da compra. A taxa da Transfeera sai da parte do Kennismarket (confirmar na documentação como configurar).
 - **Cartão de crédito**: ainda não confirmado. O código está preparado, mas **desligado** (`PAYMENT_CARD_ENABLED=false`).
 - Se houver golpe, os donos resolvem direto com o cliente e **banem o vendedor** (loja banida não vende).
 - **Links de convite**: só os donos criam, e eles são enviados por e-mail pra vendedores/afiliados criarem a loja.
@@ -45,6 +45,14 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 - Quando chegar a documentação: implementar o provedor real, ajustar os campos do cadastro do vendedor e testar no sandbox o caminho completo (compra → pagamento → split instantâneo → reembolso pelo suporte → débito do vendedor anotado).
 - O aviso de pagamento (webhook, `/api/webhooks/pagamento`) só é aceito se o módulo confirmar que veio do banco, e nunca é processado duas vezes.
 - Todo pedido guarda: valor em KN, valor em reais, cotação usada e data, porcentagem, parte do vendedor, parte do Kennismarket, situação do pagamento e do repasse.
+
+## Telas do protótipo × regras (decisões dos donos)
+- **Carteira:** vira **histórico** — sem saldo nem compra avulsa de KN Coins; mostra só os pagamentos feitos e os reembolsos recebidos.
+- **Reembolso:** todos os textos dizem que o reembolso volta **em dinheiro**, depois da análise do suporte (nunca em KN Coins).
+- **Garantia:** nada de "dinheiro retido até a entrega". O texto passa a ser **proteção pelo suporte**: se a entrega não bater com o combinado, o suporte analisa e o Kennismarket devolve o dinheiro.
+- **Compra:** o cliente conversa no chat, o vendedor manda a **proposta com preço**, o cliente **paga a proposta** e só então o trabalho começa. Produtos de preço fixo da loja também podem ser pagos direto.
+- **Divisão:** o controle do painel do dono continua, **por loja** (padrão 50/50). Ver "Pagamentos e dinheiro".
+- **Pagamento:** a tela mostra **Pix e boleto**, e o **cartão desativado com a etiqueta "em breve"** até a Transfeera confirmar. Sem iDEAL, PayPal nem outras moedas.
 
 ## Reembolsos
 - **Nunca automáticos.** O cliente clica em "Solicitar reembolso", e o suporte analisa caso a caso (pra evitar golpe contra vendedor).
