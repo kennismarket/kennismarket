@@ -26,10 +26,11 @@ const emailInterno = (usuario) => `${usuario}.${crypto.randomBytes(4).toString('
 const emailVisivel = (email) => (email && !email.endsWith('.invalid') ? email : '');
 const falha = (status, codigo, mensagem) => Object.assign(erro(status, mensagem), { codigo });
 
-export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {} }) {
+export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {}, limites = {} }) {
   const r = Router();
-  const tentativas = limitePorIp({ max: 30, janelaMs: 10 * 60 * 1000, mensagem: 'muitas tentativas: espere alguns minutos' });
-  const cadastros = limitePorIp({ max: 20, janelaMs: 60 * 60 * 1000, mensagem: 'muitos cadastros: espere um pouco' });
+  const limite = (opcoes) => (limites.desligados ? (_req, _res, next) => next() : limitePorIp(opcoes));
+  const tentativas = limite({ max: 30, janelaMs: 10 * 60 * 1000, mensagem: 'muitas tentativas: espere alguns minutos' });
+  const cadastros = limite({ max: 20, janelaMs: 60 * 60 * 1000, mensagem: 'muitos cadastros: espere um pouco' });
 
   // Responde os erros com { erro, codigo }, que a tela traduz.
   const responder = (fn) => rota(async (req, res) => {
@@ -64,6 +65,13 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {} }) {
     };
   };
 
+  // Confere a senha; conta banida recebe um erro próprio (a tela manda falar com o suporte).
+  const entrar = async (email, senha) => {
+    const s = email ? await repo.entrarComSenha(email, senha) : null;
+    if (s?.banida) throw falha(403, 'conta_banida', 'conta suspensa: fale com o suporte');
+    return s;
+  };
+
   const validarSenha = (senha) => {
     if (typeof senha !== 'string' || senha.length < 8) throw falha(400, 'senha_curta', 'senha com menos de 8 caracteres');
     if (senha.length > 72) throw falha(400, 'senha_longa', 'senha com mais de 72 caracteres');
@@ -79,7 +87,7 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {} }) {
       const p = USUARIO.test(nomeDeUsuario(login)) ? await repo.perfilPorUsuario(nomeDeUsuario(login)) : null;
       email = p ? await repo.emailDaConta(p.id) : null;
     }
-    const sessao = email ? await repo.entrarComSenha(email, senha) : null;
+    const sessao = await entrar(email, senha);
     if (!sessao) throw falha(401, 'login_invalido', 'usuário ou senha incorretos');
     const usuario = await repo.usuarioPorToken(sessao.access_token);
     res.json(await resposta(sessao, usuario.id));
@@ -114,6 +122,24 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {} }) {
     if (!email || !(await repo.entrarComSenha(email, String(atual ?? '')))) throw falha(401, 'senha_errada', 'senha atual incorreta');
     await repo.trocarSenha(req.usuario.id, nova);
     res.json({ ok: true });
+  }));
+
+  // Excluir conta (página "Minha conta"), com a senha. Conta com pedidos: os pedidos ficam
+  // (registro obrigatório), mas nome, usuário e e-mail são apagados e o login é desligado.
+  // Vendedor: o link de convite deixa de entrar (a loja continua, para o dono decidir).
+  // Conta de dono não se exclui por aqui, para não perder o acesso ao painel.
+  r.delete('/conta', exigirUsuario(repo, pagamentos), tentativas, responder(async (req, res) => {
+    const id = req.usuario.id;
+    if (req.usuario.papel === 'dono') throw falha(403, 'conta_dono', 'conta de dono não pode ser excluída por aqui');
+    const email = await repo.emailDaConta(id);
+    if (!email || !(await repo.entrarComSenha(email, String(req.body?.senha ?? '')))) throw falha(401, 'senha_errada', 'senha incorreta');
+    for (const d of await repo.listarDocsPrototipo('sellers')) {
+      if (d.dados?.acc?.userId === id) {
+        await repo.apagarDocPrototipo('sellers', d.id);
+        mudouPrototipo('sellers');
+      }
+    }
+    res.json(await repo.excluirConta(id));
   }));
 
   // Página "Minha conta": nome, nome de usuário e e-mail (opcional, como no cadastro).
@@ -187,7 +213,7 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {} }) {
     const acc = { token, username: usuario, userId: id, created: Date.now(), pwAt: Date.now() };
     await salvarAcc(token, acc);
     await usarConvite(token, id);
-    res.status(201).json({ ...(await resposta(await repo.entrarComSenha(email, senha), id)), acc });
+    res.status(201).json({ ...(await resposta(await entrar(email, senha), id)), acc });
   }));
 
   // Login pelo link do vendedor. Conta antiga do protótipo: confere o hash e passa para o Supabase.
@@ -209,8 +235,7 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {} }) {
       acc = { ...resto, userId: id, migradoEm: Date.now() };
       await salvarAcc(token, acc);
     }
-    const email = await repo.emailDaConta(id);
-    const sessao = email ? await repo.entrarComSenha(email, senha) : null;
+    const sessao = await entrar(await repo.emailDaConta(id), senha);
     if (!sessao) throw errado();
     res.json({ ...(await resposta(sessao, id)), acc });
   }));
@@ -236,7 +261,7 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {} }) {
     acc = { ...resto, userId: id, pwAt: Date.now() };
     await salvarAcc(token, acc);
     await usarConvite(token, id);
-    res.json({ ...(await resposta(await repo.entrarComSenha(email, senha), id)), acc });
+    res.json({ ...(await resposta(await entrar(email, senha), id)), acc });
   }));
 
   return r;

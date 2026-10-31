@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { Router } from 'express';
 import { debitoDoVendedor } from '../lib/dinheiro.js';
 import { erro, exigirDono, exigirUsuario, rota } from '../lib/seguranca.js';
@@ -9,6 +10,36 @@ export function rotasAdmin({ repo, pagamentos }) {
 
   // Confere o login do dono (a tela de login da administração usa isto).
   r.get('/eu', (req, res) => res.json({ email: req.usuario.email, nome: req.usuario.nome, papel: req.usuario.papel }));
+
+  // ---------- contas (seção "Contas" do painel do dono) ----------
+  // Busca por nome, usuário ou e-mail. O e-mail interno (sem e-mail) não aparece.
+  r.get('/contas', rota(async (req, res) => {
+    const termo = String(req.query.q || '').trim();
+    if (termo.length < 2) throw erro(400, 'digite pelo menos 2 letras');
+    const contas = await repo.buscarContas(termo);
+    res.json({ contas: contas.map((c) => ({ ...c, email: c.email.endsWith('.invalid') ? '' : c.email })) });
+  }));
+  const contaAlvo = async (req) => {
+    const p = await repo.perfil(req.params.id);
+    if (!p) throw erro(404, 'conta não encontrada');
+    if (p.papel === 'dono') throw erro(403, 'contas de dono não são alteradas por aqui');
+    return p;
+  };
+  // Senha temporária, mostrada uma vez para o dono passar ao cliente (que troca em "Minha conta").
+  r.post('/contas/:id/senha', rota(async (req, res) => {
+    await contaAlvo(req);
+    const letras = 'abcdefghjkmnpqrstuvwxyz23456789';
+    const senha = Array.from(crypto.randomBytes(12), (b) => letras[b % letras.length]).join('');
+    await repo.trocarSenha(req.params.id, senha);
+    res.json({ senha });
+  }));
+  // Banir: a conta não entra mais, e quem estava logado perde o acesso na hora.
+  r.post('/contas/:id/banir', rota(async (req, res) => {
+    await contaAlvo(req);
+    if (typeof req.body?.banir !== 'boolean') throw erro(400, 'informe banir: true ou false');
+    await repo.banirConta(req.params.id, req.body.banir);
+    res.json({ ok: true, banida: req.body.banir });
+  }));
 
   // Decide um pedido de reembolso. Aprovado = devolve em dinheiro, saindo do caixa do Kennismarket,
   // e anota o débito do vendedor (a parte dele que já tinha sido repassada).

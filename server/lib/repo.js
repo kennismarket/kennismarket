@@ -36,6 +36,7 @@ export const repo = {
   async usuarioPorToken(token) {
     const { data, error } = await db().auth.getUser(token);
     if (error || !data?.user) return null;
+    if (data.user.banned_until && Date.parse(data.user.banned_until) > Date.now()) return null; // conta banida perde o acesso na hora
     const perfil = checar(await db().from('perfis').select('nome, papel, usuario').eq('id', data.user.id).maybeSingle());
     return { id: data.user.id, email: data.user.email, nome: perfil?.nome || data.user.email, papel: perfil?.papel || 'cliente', usuario: perfil?.usuario || null };
   },
@@ -67,11 +68,12 @@ export const repo = {
     }
     return { id: data.user.id };
   },
-  // Confere e-mail e senha. Devolve a sessão (tokens) ou null se não baterem.
+  // Confere e-mail e senha. Devolve a sessão (tokens), { banida: true } ou null se não baterem.
   async entrarComSenha(email, senha) {
     if (!config.supabase.publishableKey) throw Object.assign(new Error('SUPABASE_PUBLISHABLE_KEY não configurada'), { status: 503 });
     const anon = createClient(config.supabase.url, config.supabase.publishableKey, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data, error } = await anon.auth.signInWithPassword({ email, password: senha });
+    if (error && (error.code === 'user_banned' || /banned/i.test(error.message))) return { banida: true };
     if (error || !data?.session) return null;
     const s = data.session;
     return { access_token: s.access_token, refresh_token: s.refresh_token, expires_in: s.expires_in };
@@ -86,6 +88,40 @@ export const repo = {
       const repetido = error.code === '23505';
       throw Object.assign(new Error(repetido ? 'nome de usuário em uso' : `Supabase: ${error.message}`), { status: repetido ? 409 : 502, codigo: repetido ? 'usuario_em_uso' : undefined });
     }
+  },
+  // ---------- contas: painel do dono e excluir conta ----------
+  // Busca por nome, usuário ou e-mail (até 30). Lê os logins de uma vez: serve até alguns
+  // milhares de contas; depois disso, trocar por uma busca no banco.
+  async buscarContas(termo) {
+    const t = termo.toLowerCase();
+    const logins = [];
+    for (let pagina = 1; pagina <= 10; pagina++) {
+      const { users } = checar(await db().auth.admin.listUsers({ page: pagina, perPage: 1000 }));
+      logins.push(...users);
+      if (users.length < 1000) break;
+    }
+    const perfis = checar(await db().from('perfis').select('id, nome, papel, usuario'));
+    const porId = Object.fromEntries(perfis.map((p) => [p.id, p]));
+    return logins
+      .map((u) => ({ ...(porId[u.id] || { id: u.id, nome: '', papel: 'cliente', usuario: null }), id: u.id, email: u.email || '',
+        banida: Boolean(u.banned_until && Date.parse(u.banned_until) > Date.now()), criadaEm: u.created_at }))
+      .filter((c) => [c.nome, c.usuario, c.email].some((x) => x && x.toLowerCase().includes(t)))
+      .slice(0, 30);
+  },
+  async banirConta(id, banir) {
+    checar(await db().auth.admin.updateUserById(id, { ban_duration: banir ? '876000h' : 'none' }));
+  },
+  // Apaga o login e o perfil. Se a conta tem registros que precisam ficar (pedidos, por
+  // exemplo), apaga os dados pessoais e desliga o login, em vez de apagar.
+  async excluirConta(id) {
+    const { error } = await db().auth.admin.deleteUser(id);
+    if (!error) return { apagada: true };
+    checar(await db().from('perfis').update({ nome: 'Conta excluída', usuario: null }).eq('id', id));
+    checar(await db().auth.admin.updateUserById(id, {
+      email: `excluida.${crypto.randomBytes(6).toString('hex')}@sem-email.kennismarket.invalid`, email_confirm: true,
+      password: crypto.randomBytes(24).toString('base64url'), ban_duration: '876000h', user_metadata: {},
+    }));
+    return { apagada: false };
   },
   // Troca o e-mail do login (já confirmado). E-mail de outra conta: codigo 'email_em_uso'.
   async trocarEmail(id, email) {

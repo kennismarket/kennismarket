@@ -35,6 +35,7 @@ export function criarRepoMemoria() {
     async entrarComSenha(email, senha) {
       const c = Object.values(t.contas).find((x) => x.email === email);
       if (!c || c.senha !== senha) return null;
+      if (c.banida) return { banida: true };
       const token = `tok-${crypto.randomUUID()}`;
       t.usuarios[token] = { id: c.id, email: c.email, nome: c.nome, papel: c.papel, usuario: c.usuario };
       return { access_token: token, refresh_token: `rt-${token}`, expires_in: 3600 };
@@ -44,6 +45,25 @@ export function criarRepoMemoria() {
       if (usuario && Object.values(t.contas).some((c) => c.id !== id && c.usuario === usuario)) throw Object.assign(new Error('nome de usuário em uso'), { status: 409, codigo: 'usuario_em_uso' });
       Object.assign(t.contas[id], { nome, usuario });
       for (const u of Object.values(t.usuarios)) if (u.id === id) Object.assign(u, { nome, usuario });
+    },
+    async buscarContas(termo) {
+      const busca = termo.toLowerCase();
+      return Object.values(t.contas)
+        .map((c) => ({ id: c.id, nome: c.nome, usuario: c.usuario, papel: c.papel, email: c.email, banida: Boolean(c.banida) }))
+        .filter((c) => [c.nome, c.usuario, c.email].some((x) => x && x.toLowerCase().includes(busca)));
+    },
+    async banirConta(id, banir) {
+      t.contas[id].banida = banir;
+      if (banir) for (const [tok, u] of Object.entries(t.usuarios)) if (u.id === id) delete t.usuarios[tok];
+    },
+    async excluirConta(id) {
+      for (const [tok, u] of Object.entries(t.usuarios)) if (u.id === id) delete t.usuarios[tok];
+      if (Object.values(t.pedidos).some((p) => p.cliente_id === id)) {
+        Object.assign(t.contas[id], { nome: 'Conta excluída', usuario: null, email: `excluida.${id}@sem-email.kennismarket.invalid`, senha: crypto.randomUUID(), banida: true });
+        return { apagada: false };
+      }
+      delete t.contas[id];
+      return { apagada: true };
     },
     async trocarEmail(id, email) {
       if (Object.values(t.contas).some((c) => c.id !== id && c.email === email)) throw Object.assign(new Error('e-mail já cadastrado'), { status: 409, codigo: 'email_em_uso' });
