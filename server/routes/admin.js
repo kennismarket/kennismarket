@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
 import { debitoDoVendedor } from '../lib/dinheiro.js';
+import { donasDasLojas, idDaLoja } from '../lib/lojas-prototipo.js';
 import { erro, exigirDono, exigirUsuario, rota } from '../lib/seguranca.js';
 
 // Ações do suporte (só os donos).
-export function rotasAdmin({ repo, pagamentos }) {
+export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
   const r = Router();
   r.use(exigirUsuario(repo, pagamentos), exigirDono);
 
@@ -34,11 +35,36 @@ export function rotasAdmin({ repo, pagamentos }) {
     res.json({ senha });
   }));
   // Banir: a conta não entra mais, e quem estava logado perde o acesso na hora.
+  // Vendedor banido: a loja dele sai do catálogo e não pode ser editada (loja banida não vende);
+  // desbanir devolve a loja ao catálogo.
   r.post('/contas/:id/banir', rota(async (req, res) => {
-    await contaAlvo(req);
-    if (typeof req.body?.banir !== 'boolean') throw erro(400, 'informe banir: true ou false');
-    await repo.banirConta(req.params.id, req.body.banir);
-    res.json({ ok: true, banida: req.body.banir });
+    const alvo = await contaAlvo(req);
+    const banir = req.body?.banir;
+    if (typeof banir !== 'boolean') throw erro(400, 'informe banir: true ou false');
+    await repo.banirConta(req.params.id, banir);
+    const lojas = [];
+    if (alvo.papel === 'vendedor') {
+      const donas = await donasDasLojas(repo);
+      for (const d of await repo.listarDocsPrototipo('stores')) {
+        const id = idDaLoja(d.id);
+        if (id == null || donas[id] !== req.params.id || !d.dados?.store) continue;
+        await repo.salvarDocPrototipo('stores', d.id, { ...d.dados, store: { ...d.dados.store, pub: !banir }, contaDona: req.params.id, banida: banir, ts: Date.now() });
+        lojas.push(id);
+      }
+      if (lojas.length) mudouPrototipo('stores');
+      // a cópia da loja no documento do vendedor também sai do catálogo (e o documento trava)
+      let vendedores = 0;
+      for (const d of await repo.listarDocsPrototipo('sellers')) {
+        const acc = d.dados?.acc;
+        if (acc?.userId !== req.params.id) continue;
+        const novo = { ...acc, banida: banir, ...(acc.store ? { store: { ...acc.store, pub: !banir } } : {}) };
+        await repo.salvarDocPrototipo('sellers', d.id, { ...d.dados, acc: novo, ts: Date.now() });
+        if (acc.store?.id != null && !lojas.includes(acc.store.id)) lojas.push(acc.store.id);
+        vendedores++;
+      }
+      if (vendedores) mudouPrototipo('sellers');
+    }
+    res.json({ ok: true, banida: banir, lojas });
   }));
 
   // Decide um pedido de reembolso. Aprovado = devolve em dinheiro, saindo do caixa do Kennismarket,

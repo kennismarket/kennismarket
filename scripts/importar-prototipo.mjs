@@ -1,6 +1,9 @@
 // Importa para o site os dados do protótipo publicado no claude.ai.
 //
-// Uso:  node scripts/importar-prototipo.mjs <pasta-exportada> <endereço-do-site>
+// Uso:  KM_TOKEN=<token do dono> node scripts/importar-prototipo.mjs <pasta-exportada> <endereço-do-site>
+//
+// Desde a etapa 2, só contas com login gravam: KM_TOKEN é o token de acesso da conta de dono
+// (no navegador, logado como dono: JSON.parse(localStorage['km-sessao']).access).
 //
 // A pasta tem o formato da exportação do claude.ai:
 //   <pasta>/stores/*.json, <pasta>/delivfiles/*.json, <pasta>/sellers/*.json  (um documento por arquivo)
@@ -21,7 +24,8 @@ const TIPOS = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpe
 
 async function pedir(metodo, caminho, corpo, tipo = 'application/json') {
   for (let tentativa = 1; ; tentativa++) {
-    const r = await fetch(base + caminho, { method: metodo, headers: { 'Content-Type': tipo }, body: corpo });
+    const headers = { 'Content-Type': tipo, ...(process.env.KM_TOKEN ? { Authorization: `Bearer ${process.env.KM_TOKEN}` } : {}) };
+    const r = await fetch(base + caminho, { method: metodo, headers, body: corpo });
     if (r.ok) return r.json();
     // O site pode estar acordando (Render) ou limitando o ritmo: espera e tenta de novo.
     if ((r.status >= 500 || r.status === 429) && tentativa < 6) { await new Promise((ok) => setTimeout(ok, 5000 * tentativa)); continue; }

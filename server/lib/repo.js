@@ -223,10 +223,13 @@ export const repo = {
     const linhas = checar(await db().from('prototipo_arquivos').select('tamanho').limit(10000));
     return linhas.reduce((t, l) => t + l.tamanho, 0);
   },
-  async salvarArquivoPrototipo(id, tipo, conteudo) {
+  async salvarArquivoPrototipo(id, tipo, conteudo, enviadoPor = null) {
     const { error } = await db().storage.from(PASTA).upload(id, conteudo, { contentType: tipo, upsert: true });
     if (error) throw Object.assign(new Error(`Storage: ${error.message}`), { status: 502 });
-    checar(await db().from('prototipo_arquivos').upsert({ id, tipo, tamanho: conteudo.length }));
+    checar(await db().from('prototipo_arquivos').upsert({ id, tipo, tamanho: conteudo.length, enviado_por: enviadoPor }));
+  },
+  async quemEnviouArquivoPrototipo(id) {
+    return checar(await db().from('prototipo_arquivos').select('enviado_por').eq('id', id).maybeSingle())?.enviado_por || null;
   },
   async lerArquivoPrototipo(id) {
     const info = checar(await db().from('prototipo_arquivos').select('tipo').eq('id', id).maybeSingle());
