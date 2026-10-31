@@ -79,6 +79,22 @@ export const repo = {
   async trocarSenha(id, senha) {
     checar(await db().auth.admin.updateUserById(id, { password: senha }));
   },
+  // Nome e nome de usuário do perfil. Usuário repetido: codigo 'usuario_em_uso'.
+  async atualizarPerfil(id, { nome, usuario }) {
+    const { error } = await db().from('perfis').update({ nome, usuario }).eq('id', id);
+    if (error) {
+      const repetido = error.code === '23505';
+      throw Object.assign(new Error(repetido ? 'nome de usuário em uso' : `Supabase: ${error.message}`), { status: repetido ? 409 : 502, codigo: repetido ? 'usuario_em_uso' : undefined });
+    }
+  },
+  // Troca o e-mail do login (já confirmado). E-mail de outra conta: codigo 'email_em_uso'.
+  async trocarEmail(id, email) {
+    const { error } = await db().auth.admin.updateUserById(id, { email, email_confirm: true });
+    if (error) {
+      const jaExiste = error.status === 422 || /already|registered|exists/i.test(error.message);
+      throw Object.assign(new Error(jaExiste ? 'e-mail já cadastrado' : `Supabase: ${error.message}`), { status: jaExiste ? 409 : 502, codigo: jaExiste ? 'email_em_uso' : undefined });
+    }
+  },
 
   // ---------- lojas e produtos ----------
   async produto(id) {
