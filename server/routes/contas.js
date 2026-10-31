@@ -45,6 +45,7 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {} }) {
   const doc = async (colecao, id) => (await repo.listarDocsPrototipo(colecao)).find((d) => d.id === id)?.dados || null;
   const gravar = async (colecao, id, dados) => { await repo.salvarDocPrototipo(colecao, id, dados); mudouPrototipo(colecao); };
   const conviteValido = (c) => c && !c.used && (!c.exp || c.exp > Date.now());
+  const salvarAcc = (token, acc) => gravar('sellers', `acc-${token}`, { acc, ts: Date.now() });
   // Token de vendedor ligado a uma conta (para o vendedor também entrar pela tela inicial).
   const vendedorDaConta = async (id) => {
     const d = (await repo.listarDocsPrototipo('sellers')).find((x) => x.dados?.acc?.userId === id);
@@ -115,13 +116,42 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {} }) {
     res.json({ ok: true });
   }));
 
+  // Página "Minha conta": nome, nome de usuário e e-mail (opcional, como no cadastro).
+  // Sem e-mail, a conta volta a ter um e-mail interno. Vendedor que troca o usuário
+  // passa a entrar pelo link com o usuário novo.
+  r.put('/perfil', exigirUsuario(repo, pagamentos), tentativas, responder(async (req, res) => {
+    const id = req.usuario.id;
+    const nome = limpar(req.body?.nome).replace(/\s+/g, ' ');
+    const usuario = nomeDeUsuario(req.body?.usuario);
+    const emailNovo = limpar(req.body?.email).toLowerCase();
+    if (nome.length < 2 || nome.length > 100) throw falha(400, 'nome_invalido', 'informe o nome');
+    if (!USUARIO.test(usuario)) throw falha(400, 'usuario_invalido', 'nome de usuário inválido');
+    if (emailNovo && (!EMAIL.test(emailNovo) || emailNovo.endsWith('.invalid'))) throw falha(400, 'email_invalido', 'e-mail inválido');
+    const antes = await repo.perfil(id);
+    if (usuario !== antes?.usuario) {
+      const dono = await repo.perfilPorUsuario(usuario);
+      if (dono && dono.id !== id) throw falha(409, 'usuario_em_uso', 'nome de usuário em uso');
+    }
+    const emailAtual = await repo.emailDaConta(id);
+    if (emailNovo !== emailVisivel(emailAtual)) {
+      await repo.trocarEmail(id, emailNovo || emailInterno(usuario));
+    }
+    await repo.atualizarPerfil(id, { nome, usuario });
+    if (antes?.papel === 'vendedor' && usuario !== antes.usuario) {
+      for (const d of await repo.listarDocsPrototipo('sellers')) {
+        if (d.dados?.acc?.userId === id) await salvarAcc(d.dados.acc.token, { ...d.dados.acc, username: usuario });
+      }
+    }
+    const { perfil, vendedor } = await resposta(null, id);
+    res.json({ perfil, vendedor });
+  }));
+
   // ---------- vendedores (pelo link de convite) ----------
   const tokenDe = (req) => {
     const t = limpar(req.body?.token);
     if (!/^[a-z0-9]{4,40}$/.test(t)) throw falha(400, 'convite_invalido', 'link de convite inválido');
     return t;
   };
-  const salvarAcc = (token, acc) => gravar('sellers', `acc-${token}`, { acc, ts: Date.now() });
   const usarConvite = async (token, contaId) => {
     const d = await doc('stores', `inv-${token}`);
     if (d?.invite) await gravar('stores', `inv-${token}`, { ...d, invite: { ...d.invite, used: true, usedAt: Date.now(), usedBy: contaId }, ts: Date.now() });

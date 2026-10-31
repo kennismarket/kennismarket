@@ -6,7 +6,7 @@
  *   - tela inicial: entrar com o nome de usuário ou o e-mail, e criar conta de cliente;
  *   - link de convite do vendedor (#convite-<token>): criar a conta, entrar e trocar a senha
  *     pelo link novo que o dono gera no painel;
- *   - "Alterar senha" na página da conta;
+ *   - página "Minha conta": nome, usuário e e-mail, e "Alterar senha";
  *   - conta de dono: mesma tela inicial; só ela vê e abre o painel do dono.
  * Os botões de "conta de demonstração" continuam como no protótipo (só no navegador).
  *
@@ -259,6 +259,33 @@
     checando = false;
     if (typeof S !== 'undefined' && (S.view === 'admin' || S.view === 'editar') && typeof render === 'function') render();
   }
+
+  // "Minha conta": contas reais salvam nome, usuário e e-mail no servidor.
+  // Registrado já aqui (antes do protótipo), para rodar antes do salvamento só no navegador;
+  // contas de demonstração seguem para o protótipo, como antes.
+  document.addEventListener('submit', async function (e) {
+    if (!e.target || e.target.id !== 'accform' || !(S.user && S.user.contaId)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    var g = function (id) { return document.getElementById(id).value.trim(); };
+    var err = document.getElementById('ac-err'), botao = e.target.querySelector('button[type=submit]');
+    var nome = g('ac-full'), un = g('ac-user').replace(/^@/, '').toLowerCase(), email = g('ac-email');
+    err.textContent = '';
+    if (nome.length < 2) return (err.textContent = tr('accErrName'));
+    if (!/^[a-z0-9_.]{3,20}$/.test(un)) return (err.textContent = tr('accUserH'));
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) return (err.textContent = tr('invErr'));
+    if (botao) botao.disabled = true;
+    try {
+      var r = await api('PUT', '/perfil', { nome: nome, usuario: un, email: email }, true);
+      var u = accUser(), p = r.perfil;
+      u.full = p.nome; u.name = p.nome.split(/\s+/)[0]; u.username = p.usuario; u.email = p.email;
+      if (r.vendedor && r.vendedor.acc) SELLERS[r.vendedor.token] = r.vendedor.acc;
+      save(); render(); toast(tr('accSaved'));
+    } catch (x) {
+      err.textContent = x.codigo === 'nome_invalido' ? tr('accErrName') : x.codigo === 'email_invalido' ? tr('invErr') : mensagem(x.codigo);
+      if (botao) botao.disabled = false;
+    }
+  }, true);
 
   aplicarPerfil(null);
   document.addEventListener('DOMContentLoaded', function () {

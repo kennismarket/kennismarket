@@ -136,3 +136,43 @@ test('vendedor esqueceu a senha: só o link novo do dono (com "from") permite tr
   // o link de troca só vale uma vez
   assert.equal((await pedir('POST', '/api/contas/vendedor/redefinir', { token: 'rst222', senha: 'outra12345' })).s, 410);
 });
+
+test('minha conta: salva nome, usuário e e-mail no servidor', async () => {
+  const { j } = await pedir('POST', '/api/contas/cadastro', { nome: 'Rita Alves', usuario: 'rita', senha: 'segredo123' });
+  const t = j.sessao.access_token;
+  await pedir('POST', '/api/contas/cadastro', { nome: 'Outra Pessoa', usuario: 'ocupado', senha: 'segredo123', email: 'ocupado@ex.com' });
+  const salvar = (corpo) => pedir('PUT', '/api/contas/perfil', corpo, t);
+
+  // coloca e-mail e troca o usuário; entra com os dados novos
+  const r = await salvar({ nome: 'Rita A. Alves', usuario: 'rita_alves', email: 'Rita@Ex.com' });
+  assert.equal(r.s, 200);
+  assert.deepEqual([r.j.perfil.nome, r.j.perfil.usuario, r.j.perfil.email], ['Rita A. Alves', 'rita_alves', 'rita@ex.com']);
+  assert.equal((await pedir('POST', '/api/contas/entrar', { login: 'rita_alves', senha: 'segredo123' })).s, 200);
+  assert.equal((await pedir('POST', '/api/contas/entrar', { login: 'rita@ex.com', senha: 'segredo123' })).s, 200);
+  assert.equal((await pedir('POST', '/api/contas/entrar', { login: 'rita', senha: 'segredo123' })).s, 401);
+
+  // tira o e-mail: volta a ter um e-mail interno, que não aparece
+  const sem = await salvar({ nome: 'Rita A. Alves', usuario: 'rita_alves', email: '' });
+  assert.equal(sem.j.perfil.email, '');
+  assert.match(Object.values(repo.tabelas.contas).find((c) => c.usuario === 'rita_alves').email, /@sem-email\.kennismarket\.invalid$/);
+
+  // erros conhecidos
+  assert.equal((await salvar({ nome: 'Rita', usuario: 'ocupado', email: '' })).j.codigo, 'usuario_em_uso');
+  assert.equal((await salvar({ nome: 'Rita', usuario: 'rita_alves', email: 'ocupado@ex.com' })).j.codigo, 'email_em_uso');
+  assert.equal((await salvar({ nome: 'R', usuario: 'rita_alves', email: '' })).j.codigo, 'nome_invalido');
+  assert.equal((await salvar({ nome: 'Rita', usuario: 'R!', email: '' })).j.codigo, 'usuario_invalido');
+  assert.equal((await salvar({ nome: 'Rita', usuario: 'rita_alves', email: 'nada' })).j.codigo, 'email_invalido');
+  assert.equal((await pedir('PUT', '/api/contas/perfil', { nome: 'Rita', usuario: 'rita_alves' })).s, 401);
+  // salvar sem mudar nada funciona
+  assert.equal((await salvar({ nome: 'Rita A. Alves', usuario: 'rita_alves', email: '' })).s, 200);
+});
+
+test('minha conta: vendedor que troca o usuário entra pelo link com o usuário novo', async () => {
+  await repo.salvarDocPrototipo('stores', 'inv-perf111', { invite: { token: 'perf111', email: 'p@ex.com', exp: Date.now() + 864e5, used: false } });
+  const c = await pedir('POST', '/api/contas/vendedor/criar', { token: 'perf111', usuario: 'loja_velha', senha: 'segredo123' });
+  const r = await pedir('PUT', '/api/contas/perfil', { nome: 'Loja Nova', usuario: 'loja_nova', email: 'p@ex.com' }, c.j.sessao.access_token);
+  assert.equal(r.s, 200);
+  assert.equal((await doc('sellers', 'acc-perf111')).acc.username, 'loja_nova');
+  assert.equal((await pedir('POST', '/api/contas/vendedor/entrar', { token: 'perf111', usuario: 'loja_nova', senha: 'segredo123' })).s, 200);
+  assert.equal((await pedir('POST', '/api/contas/vendedor/entrar', { token: 'perf111', usuario: 'loja_velha', senha: 'segredo123' })).s, 401);
+});

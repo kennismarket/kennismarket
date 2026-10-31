@@ -40,6 +40,16 @@ export function criarRepoMemoria() {
       return { access_token: token, refresh_token: `rt-${token}`, expires_in: 3600 };
     },
     async trocarSenha(id, senha) { t.contas[id].senha = senha; },
+    async atualizarPerfil(id, { nome, usuario }) {
+      if (usuario && Object.values(t.contas).some((c) => c.id !== id && c.usuario === usuario)) throw Object.assign(new Error('nome de usuário em uso'), { status: 409, codigo: 'usuario_em_uso' });
+      Object.assign(t.contas[id], { nome, usuario });
+      for (const u of Object.values(t.usuarios)) if (u.id === id) Object.assign(u, { nome, usuario });
+    },
+    async trocarEmail(id, email) {
+      if (Object.values(t.contas).some((c) => c.id !== id && c.email === email)) throw Object.assign(new Error('e-mail já cadastrado'), { status: 409, codigo: 'email_em_uso' });
+      t.contas[id].email = email;
+      for (const u of Object.values(t.usuarios)) if (u.id === id) u.email = email;
+    },
     async produto(id) { return copia(t.produtos[id]); },
     async loja(id) { return copia(t.lojas[id]); },
     async lojaDoVendedor(vendedorId) { return copia(Object.values(t.lojas).find((l) => l.vendedor_id === vendedorId)); },
