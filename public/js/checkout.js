@@ -178,16 +178,24 @@
         '<span>' + icon('check', 16) + ' <b>' + t('recPronto') + '</b> <span class="muted">· ' + esc((t('tipos')[pix.tipo] || pix.tipo || '') + ' ' + (pix.chave || '')) + '</span></span>' +
         '<button class="btn sm" id="km-rec-alt">' + t('recAlterar') + '</button></div></section>';
     }
-    var tipos = t('tipos');
+    // Só tipo e chave (decisão dos donos). O nome vem da conta; o CPF/CNPJ é a própria chave quando
+    // ela é CPF ou CNPJ, e só é pedido para chave de e-mail, celular ou aleatória.
+    var tipos = t('tipos'), tipo = pix.tipo || 'cpf';
     return '<section class="panel" id="km-rec" style="margin-bottom:16px"><h2>' + t('recT') + '</h2><p class="sub">' + t('recD') + '</p>' +
       '<form id="km-rec-form" novalidate style="display:grid;gap:10px">' +
-      '<div class="field"><label for="rec-nome">' + t('recNome') + '</label><input id="rec-nome" value="' + esc(r.nome || '') + '"></div>' +
-      '<div class="field"><label for="rec-doc">' + t('recDoc') + '</label><input id="rec-doc" inputmode="numeric" value="' + esc(r.documento || '') + '"></div>' +
       '<div class="field"><label for="rec-tipo">' + t('recTipo') + '</label><select id="rec-tipo" class="select">' +
-        Object.keys(tipos).map(function (k) { return '<option value="' + k + '"' + (pix.tipo === k ? ' selected' : '') + '>' + tipos[k] + '</option>'; }).join('') + '</select></div>' +
+        Object.keys(tipos).map(function (k) { return '<option value="' + k + '"' + (tipo === k ? ' selected' : '') + '>' + tipos[k] + '</option>'; }).join('') + '</select></div>' +
       '<div class="field"><label for="rec-chave">' + t('recChave') + '</label><input id="rec-chave" value="' + esc(pix.chave || '') + '"></div>' +
+      '<div class="field" id="rec-doc-campo"' + (precisaDoc(tipo) ? '' : ' hidden') + '><label for="rec-doc">' + t('recDoc') + '</label>' +
+        '<input id="rec-doc" inputmode="numeric" value="' + esc(precisaDoc(pix.tipo) ? r.documento || '' : '') + '"></div>' +
       '<p class="err" id="rec-err"></p><button class="btn primary" type="submit">' + t('recSalvar') + '</button></form></section>';
   }
+  function precisaDoc(tipo) { return ['email', 'telefone', 'aleatoria'].indexOf(tipo) >= 0; }
+  document.addEventListener('change', function (e) {
+    if (!e.target || e.target.id !== 'rec-tipo') return;
+    var campo = document.getElementById('rec-doc-campo');
+    if (campo) campo.hidden = !precisaDoc(e.target.value);
+  });
   document.addEventListener('click', function (e) {
     if (e.target && e.target.closest && e.target.closest('#km-rec-alt')) { rec.editando = true; var y = scrollY; render(); scrollTo(0, y); }
   });
@@ -196,9 +204,11 @@
     e.preventDefault(); e.stopImmediatePropagation();
     var g = function (id) { return document.getElementById(id).value.trim(); };
     var err = document.getElementById('rec-err'), b = e.target.querySelector('button[type=submit]');
+    var tipo = g('rec-tipo'), corpo = { pix: { tipo: tipo, chave: g('rec-chave') } };
+    if (precisaDoc(tipo)) corpo.cpfCnpj = g('rec-doc');
     b.disabled = true; err.textContent = '';
     try {
-      rec.estado = await api('PUT', '/api/loja/recebimento', { nome: g('rec-nome'), cpfCnpj: g('rec-doc'), pix: { tipo: g('rec-tipo'), chave: g('rec-chave') } });
+      rec.estado = await api('PUT', '/api/loja/recebimento', corpo);
       rec.editando = false; var y = scrollY; render(); scrollTo(0, y); toast(t('recOk'));
     } catch (x) {
       err.textContent = x.status === 400 ? (x.message || t('recErr')) : t('falha');

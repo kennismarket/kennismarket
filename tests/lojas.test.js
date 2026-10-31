@@ -309,3 +309,23 @@ test('checkout: CPF/CNPJ só é obrigatório no boleto; no Pix é opcional', asy
   assert.equal((await comprar({ formaPagamento: 'pix', cpfCnpj: '123' })).s, 400); // se vier, tem que ser válido
   assert.equal((await comprar({ formaPagamento: 'boleto', cpfCnpj: '111.444.777-35' })).s, 201);
 });
+
+test('como você recebe: só a chave Pix; nome da conta, e o documento é a chave quando ela é CPF/CNPJ', async () => {
+  const pia = await vendedor('piatok1', 'pia_v');
+  assert.equal(await gravar('PUT', 'stores/s6700', lojaCompleta(6700), pia.t), 200);
+  const salvar = (corpo) => fetch(`${base}/api/loja/recebimento`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pia.t}` }, body: JSON.stringify(corpo) })
+    .then(async (r) => ({ s: r.status, j: await r.json() }));
+  // chave CPF: vira o documento; nome vem da conta
+  const cpf = await salvar({ pix: { tipo: 'cpf', chave: '529.982.247-25' } });
+  assert.equal(cpf.s, 200);
+  assert.equal(cpf.j.situacao, 'pronto');
+  assert.equal(cpf.j.recebedor.documento, '52998224725');
+  assert.equal(cpf.j.recebedor.nome, 'pia_v');
+  // chave de e-mail: precisa do CPF/CNPJ
+  assert.equal((await salvar({ pix: { tipo: 'email', chave: 'pia@ex.com' } })).s, 400);
+  const email = await salvar({ pix: { tipo: 'email', chave: 'pia@ex.com' }, cpfCnpj: '111.444.777-35' });
+  assert.equal(email.s, 200);
+  assert.deepEqual([email.j.recebedor.documento, email.j.recebedor.pix.chave], ['11144477735', 'pia@ex.com']);
+  // chave CPF inválida: recusada
+  assert.equal((await salvar({ pix: { tipo: 'cpf', chave: '123' } })).s, 400);
+});
