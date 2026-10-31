@@ -5,7 +5,7 @@ const bate = (linha, condicoes = {}) => Object.entries(condicoes).every(([campo,
   [].concat(valores).some((v) => (v === null ? linha[campo] == null : linha[campo] === v)));
 
 export function criarRepoMemoria() {
-  const t = { usuarios: {}, lojas: {}, dadosRecebimento: {}, produtos: {}, pedidos: {}, reembolsos: {}, debitos: {}, cotacoes: [], eventos: new Set(), docs: {}, arquivos: {} };
+  const t = { usuarios: {}, lojas: {}, dadosRecebimento: {}, produtos: {}, pedidos: {}, reembolsos: {}, debitos: {}, cotacoes: [], eventos: new Set(), docs: {}, arquivos: {}, contas: {} };
   const copia = (x) => (x ? structuredClone(x) : null);
   const ultimasPorMoeda = (ate) => {
     const m = {};
@@ -16,6 +16,30 @@ export function criarRepoMemoria() {
   return {
     tabelas: t,
     async usuarioPorToken(token) { return copia(t.usuarios[token]); },
+
+    // contas: t.contas[id] = { id, email, senha, nome, usuario, papel }
+    async perfilPorUsuario(usuario) {
+      const c = Object.values(t.contas).find((x) => x.usuario === usuario);
+      return c ? { id: c.id, nome: c.nome, papel: c.papel, usuario: c.usuario } : null;
+    },
+    async perfil(id) { const c = t.contas[id]; return c ? { id: c.id, nome: c.nome, papel: c.papel, usuario: c.usuario } : null; },
+    async emailDaConta(id) { return t.contas[id]?.email || null; },
+    async criarConta({ email, senha, nome, usuario, papel }) {
+      const todas = Object.values(t.contas);
+      if (todas.some((c) => c.email === email)) throw Object.assign(new Error('e-mail já cadastrado'), { status: 409, codigo: 'email_em_uso' });
+      if (usuario && todas.some((c) => c.usuario === usuario)) throw Object.assign(new Error('nome de usuário em uso'), { status: 409, codigo: 'usuario_em_uso' });
+      const id = crypto.randomUUID();
+      t.contas[id] = { id, email, senha, nome, usuario, papel };
+      return { id };
+    },
+    async entrarComSenha(email, senha) {
+      const c = Object.values(t.contas).find((x) => x.email === email);
+      if (!c || c.senha !== senha) return null;
+      const token = `tok-${crypto.randomUUID()}`;
+      t.usuarios[token] = { id: c.id, email: c.email, nome: c.nome, papel: c.papel, usuario: c.usuario };
+      return { access_token: token, refresh_token: `rt-${token}`, expires_in: 3600 };
+    },
+    async trocarSenha(id, senha) { t.contas[id].senha = senha; },
     async produto(id) { return copia(t.produtos[id]); },
     async loja(id) { return copia(t.lojas[id]); },
     async lojaDoVendedor(vendedorId) { return copia(Object.values(t.lojas).find((l) => l.vendedor_id === vendedorId)); },

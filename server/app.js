@@ -9,6 +9,7 @@ import { rotasCotacoes, rotaRatesPrototipo } from './routes/cotacoes.js';
 import { rotasPedidos } from './routes/pedidos.js';
 import { rotasLoja } from './routes/loja.js';
 import { rotasAdmin } from './routes/admin.js';
+import { rotasContas } from './routes/contas.js';
 import { rotaWebhookPagamento } from './routes/webhook-pagamento.js';
 import { rotasTarefas } from './routes/tarefas.js';
 import { rotasTeste } from './routes/teste.js';
@@ -41,6 +42,7 @@ export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), pa
   app.use('/api/rates', rotaRatesPrototipo(deps)); // formato que o protótipo espera (RATES_URL)
   app.use('/api/pedidos', rotasPedidos(deps));
   app.use('/api/loja', rotasLoja(deps));
+  app.use('/api/contas', rotasContas({ ...deps, mudouPrototipo: prototipo.mudou }));
   app.use('/api/admin', rotasAdmin(deps));
   app.use('/api/tarefas', rotasTarefas(deps));
   app.use('/api/teste', teste.api);

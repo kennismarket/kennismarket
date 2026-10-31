@@ -174,5 +174,19 @@ do $$ begin
 end $$;
 reset role;
 
+-- 0004: nome de usuário único e no formato certo
+do $$ begin
+  update perfis set usuario = 'maria_1' where id = '00000000-0000-0000-0000-00000000000a';
+  begin
+    update perfis set usuario = 'maria_1' where id = '00000000-0000-0000-0000-00000000000b';
+    raise exception 'devia recusar nome de usuário repetido';
+  exception when unique_violation then null; end;
+  begin
+    update perfis set usuario = 'Maria Errada' where id = '00000000-0000-0000-0000-00000000000b';
+    raise exception 'devia recusar nome de usuário fora do formato';
+  exception when check_violation then null; end;
+  assert (select usuario from perfis where id = '00000000-0000-0000-0000-00000000000c') is null, 'contas antigas podem ficar sem nome de usuário';
+end $$;
+
 rollback;
 \echo 'BANCO: todas as verificações passaram'

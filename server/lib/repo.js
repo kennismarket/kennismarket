@@ -36,8 +36,48 @@ export const repo = {
   async usuarioPorToken(token) {
     const { data, error } = await db().auth.getUser(token);
     if (error || !data?.user) return null;
-    const perfil = checar(await db().from('perfis').select('nome, papel').eq('id', data.user.id).maybeSingle());
-    return { id: data.user.id, email: data.user.email, nome: perfil?.nome || data.user.email, papel: perfil?.papel || 'cliente' };
+    const perfil = checar(await db().from('perfis').select('nome, papel, usuario').eq('id', data.user.id).maybeSingle());
+    return { id: data.user.id, email: data.user.email, nome: perfil?.nome || data.user.email, papel: perfil?.papel || 'cliente', usuario: perfil?.usuario || null };
+  },
+
+  // ---------- contas (login real) ----------
+  async perfilPorUsuario(usuario) {
+    return checar(await db().from('perfis').select('id, nome, papel, usuario').eq('usuario', usuario).maybeSingle());
+  },
+  async perfil(id) {
+    return checar(await db().from('perfis').select('id, nome, papel, usuario').eq('id', id).maybeSingle());
+  },
+  async emailDaConta(id) {
+    const { data, error } = await db().auth.admin.getUserById(id);
+    return error ? null : data?.user?.email || null;
+  },
+  // Cria o login (já confirmado: sem e-mail de confirmação por enquanto) e o perfil.
+  // Erros conhecidos: codigo 'email_em_uso' ou 'usuario_em_uso'.
+  async criarConta({ email, senha, nome, usuario, papel }) {
+    const { data, error } = await db().auth.admin.createUser({ email, password: senha, email_confirm: true, user_metadata: { nome, usuario } });
+    if (error) {
+      const jaExiste = error.status === 422 || /already|registered|exists/i.test(error.message);
+      throw Object.assign(new Error(jaExiste ? 'e-mail já cadastrado' : `Supabase: ${error.message}`), { status: jaExiste ? 409 : 502, codigo: jaExiste ? 'email_em_uso' : undefined });
+    }
+    const { error: e2 } = await db().from('perfis').insert({ id: data.user.id, nome, usuario, papel });
+    if (e2) {
+      await db().auth.admin.deleteUser(data.user.id); // não deixa login sem perfil
+      const repetido = e2.code === '23505';
+      throw Object.assign(new Error(repetido ? 'nome de usuário em uso' : `Supabase: ${e2.message}`), { status: repetido ? 409 : 502, codigo: repetido ? 'usuario_em_uso' : undefined });
+    }
+    return { id: data.user.id };
+  },
+  // Confere e-mail e senha. Devolve a sessão (tokens) ou null se não baterem.
+  async entrarComSenha(email, senha) {
+    if (!config.supabase.publishableKey) throw Object.assign(new Error('SUPABASE_PUBLISHABLE_KEY não configurada'), { status: 503 });
+    const anon = createClient(config.supabase.url, config.supabase.publishableKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data, error } = await anon.auth.signInWithPassword({ email, password: senha });
+    if (error || !data?.session) return null;
+    const s = data.session;
+    return { access_token: s.access_token, refresh_token: s.refresh_token, expires_in: s.expires_in };
+  },
+  async trocarSenha(id, senha) {
+    checar(await db().auth.admin.updateUserById(id, { password: senha }));
   },
 
   // ---------- lojas e produtos ----------
