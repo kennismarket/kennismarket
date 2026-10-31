@@ -21,10 +21,10 @@
   }
 
   async function json(url, opcoes) {
-    // Gravações levam o login do dono, se houver (public/js/admin-dono.js): o servidor exige
-    // dono para criar e apagar convites, mudar a configuração e apagar contas de vendedor.
-    if (opcoes && opcoes.method && window.kmTokenDono) {
-      var token = await window.kmTokenDono();
+    // Gravações levam o login, se houver (public/js/contas.js): o servidor exige o dono
+    // para criar e apagar convites, mudar a configuração e apagar contas de vendedor.
+    if (opcoes && opcoes.method && window.kmToken) {
+      var token = await window.kmToken();
       if (token) opcoes.headers = Object.assign({}, opcoes.headers, { Authorization: 'Bearer ' + token });
     }
     var r = await fetch(url, opcoes);

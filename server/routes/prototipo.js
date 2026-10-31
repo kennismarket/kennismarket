@@ -144,5 +144,6 @@ export function rotasPrototipo({ repo, pagamentos }) {
     res.send(a.conteudo);
   }));
 
-  return { api, blob };
+  // mudou: outras partes do servidor (contas) avisam quando gravam direto num documento.
+  return { api, blob, mudou: (c) => { if (COLECOES.includes(c)) mudou(c); } };
 }
