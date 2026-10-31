@@ -42,17 +42,16 @@
 O protótipo (`kennismarket-prototipo.html`) é a referência visual oficial: o site fica igual a ele,
 e nada visual muda sem os donos aprovarem.
 
-Algumas telas e textos do protótipo descrevem regras de negócio antigas, que o CLAUDE.md mudou.
-**Como cada uma aparece no site ainda depende de decisão dos donos:**
+Algumas telas e textos do protótipo descrevem regras de negócio antigas. **Decisões dos donos (31/10/2026):**
 
-| No protótipo | Regra atual (CLAUDE.md) |
+| No protótipo | Como fica no site |
 |---|---|
-| Carteira ("Portemonnee") com saldo de KN Coins e compra de qualquer valor | Sem saldo avulso: compra exata do pedido |
-| "Ongebruikte KN Coins krijg je terug" / reembolso volta como KN Coins | Reembolso sempre em dinheiro |
-| "Reserveer KN Coins", vendedor manda proposta depois | Cliente paga primeiro, depois é atendido |
-| "Je KN Coins blijven in de garantie tot de verkoper levert" (dinheiro retido) | Split instantâneo, sem retenção |
-| Divisão ajustável de 10% a 90% no painel do dono | 50/50 em todas as vendas |
-| Pagamento por iDEAL, PayPal, cartão e outras moedas, pelo processador antigo | Pix e boleto em R$ pela Transfeera (cartão desligado) |
+| Carteira ("Portemonnee") com saldo de KN Coins e compra de qualquer valor | Vira histórico: só pagamentos feitos e reembolsos recebidos, sem saldo |
+| "Ongebruikte KN Coins krijg je terug" / reembolso volta como KN Coins | Reembolso sempre em dinheiro, depois da análise do suporte |
+| "Reserveer KN Coins", vendedor manda proposta depois | Vendedor manda a proposta no chat, o cliente paga e só então o trabalho começa; preço fixo também pode ser pago direto |
+| "Je KN Coins blijven in de garantie tot de verkoper levert" (dinheiro retido) | Proteção pelo suporte: se a entrega não bater, o Kennismarket devolve; split instantâneo continua |
+| Divisão ajustável de 10% a 90% no painel do dono | **Mantida, por loja** (padrão 50/50): a regra 50/50 fixa mudou |
+| Pagamento por iDEAL, PayPal, cartão e outras moedas | Pix e boleto; cartão aparece desativado com "em breve" |
 
 Lojas, clientes e avaliações inventadas: **podem ficar na versão de testes**, como no protótipo. Na versão real, só dados reais.
 
