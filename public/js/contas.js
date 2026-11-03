@@ -32,22 +32,22 @@
   };
   // Excluir conta, conta banida e a seção "Contas" do painel do dono.
   var TXT2 = {
-    nl: { vDia: 'Afgelopen dag', v7: 'Afgelopen 7 dagen', v30: 'Afgelopen 30 dagen', vPeriodo: 'Periode', vT: 'Verkopers', vD: 'Alle verkopersaccounts met hun verkopen (alleen echte, betaalde bestellingen). Klik op een verkoper voor elke verkoop.', vVend: 'Verkoper', vLoja: 'Winkel', vVendas: 'Verkopen', vTotal: 'Totaal verkocht', vSemLoja: 'nog geen winkel', vNenhum: 'Nog geen verkopers.', vAtualizar: 'Vernieuwen', vCarregando: 'Laden…', vData: 'Datum', vProduto: 'Product', vValor: 'Bedrag', vSit: 'Status', vParte: 'Deel van de verkoper', vPct: '{n}% voor de verkoper', vNenhumaVenda: 'Nog geen verkopen.', vFechar: 'Sluiten', vRe: '{n} terugbetaald (niet meegeteld)', st: { pago: 'Betaald', entregue: 'Geleverd', concluido: 'Afgerond', reembolso_solicitado: 'Terugbetaling gevraagd', reembolsado: 'Terugbetaald' },
+    nl: { mvT: 'Mijn verkopen', mvD: 'Je echte, betaalde verkopen en jouw deel van elke verkoop.', mvSuaParte: 'Jouw deel', mvSemLoja: 'Je hebt nog geen winkel.', vDia: 'Afgelopen dag', v7: 'Afgelopen 7 dagen', v30: 'Afgelopen 30 dagen', vPeriodo: 'Periode', vT: 'Verkopers', vD: 'Alle verkopersaccounts met hun verkopen (alleen echte, betaalde bestellingen). Klik op een verkoper voor elke verkoop.', vVend: 'Verkoper', vLoja: 'Winkel', vVendas: 'Verkopen', vTotal: 'Totaal verkocht', vSemLoja: 'nog geen winkel', vNenhum: 'Nog geen verkopers.', vAtualizar: 'Vernieuwen', vCarregando: 'Laden…', vData: 'Datum', vProduto: 'Product', vValor: 'Bedrag', vSit: 'Status', vParte: 'Deel van de verkoper', vPct: '{n}% voor de verkoper', vNenhumaVenda: 'Nog geen verkopen.', vFechar: 'Sluiten', vRe: '{n} terugbetaald (niet meegeteld)', st: { pago: 'Betaald', entregue: 'Geleverd', concluido: 'Afgerond', reembolso_solicitado: 'Terugbetaling gevraagd', reembolsado: 'Terugbetaald' },
       excluirD: 'Je account wordt van Kennismarket verwijderd en je wordt uitgelogd. Dit kan niet ongedaan worden. Vul je wachtwoord in om te bevestigen.', senhaIncorreta: 'Wachtwoord onjuist.', contaDono: 'Een eigenaarsaccount kan hier niet worden verwijderd.', banida: 'Dit account is geblokkeerd. Neem contact op met support.',
       contasT: 'Accounts', contasD: 'Zoek een account op naam, gebruikersnaam of e-mail om een tijdelijk wachtwoord te maken of het account te blokkeren.', busca: 'Naam, gebruikersnaam of e-mail', buscar: 'Zoeken', min2: 'Typ minstens 2 tekens.', nenhuma: 'Geen accounts gevonden.', semEmail: 'geen e-mail',
       cliente: 'Klant', vendedor: 'Verkoper', dono: 'Eigenaar', bloqueada: 'Geblokkeerd', novaSenha: 'Nieuw wachtwoord', banir: 'Blokkeren', desbanir: 'Deblokkeren',
       senhaTemp: 'Tijdelijk wachtwoord (geef het door; de persoon wijzigt het in Mijn account):', senhaT: 'Nieuw wachtwoord maken?', senhaD: 'Het huidige wachtwoord werkt dan niet meer.', banirT: 'Dit account blokkeren?', banirD: 'De persoon wordt meteen uitgelogd en kan niet meer inloggen. Dit kan ongedaan worden.' },
-    en: { vDia: 'Last day', v7: 'Last 7 days', v30: 'Last 30 days', vPeriodo: 'Period', vT: 'Sellers', vD: 'All seller accounts with their sales (only real, paid orders). Click a seller to see each sale.', vVend: 'Seller', vLoja: 'Store', vVendas: 'Sales', vTotal: 'Total sold', vSemLoja: 'no store yet', vNenhum: 'No sellers yet.', vAtualizar: 'Refresh', vCarregando: 'Loading…', vData: 'Date', vProduto: 'Product', vValor: 'Amount', vSit: 'Status', vParte: 'Seller’s share', vPct: '{n}% to the seller', vNenhumaVenda: 'No sales yet.', vFechar: 'Close', vRe: '{n} refunded (not counted)', st: { pago: 'Paid', entregue: 'Delivered', concluido: 'Completed', reembolso_solicitado: 'Refund requested', reembolsado: 'Refunded' },
+    en: { mvT: 'My sales', mvD: 'Your real, paid sales and your share of each one.', mvSuaParte: 'Your share', mvSemLoja: 'You don’t have a store yet.', vDia: 'Last day', v7: 'Last 7 days', v30: 'Last 30 days', vPeriodo: 'Period', vT: 'Sellers', vD: 'All seller accounts with their sales (only real, paid orders). Click a seller to see each sale.', vVend: 'Seller', vLoja: 'Store', vVendas: 'Sales', vTotal: 'Total sold', vSemLoja: 'no store yet', vNenhum: 'No sellers yet.', vAtualizar: 'Refresh', vCarregando: 'Loading…', vData: 'Date', vProduto: 'Product', vValor: 'Amount', vSit: 'Status', vParte: 'Seller’s share', vPct: '{n}% to the seller', vNenhumaVenda: 'No sales yet.', vFechar: 'Close', vRe: '{n} refunded (not counted)', st: { pago: 'Paid', entregue: 'Delivered', concluido: 'Completed', reembolso_solicitado: 'Refund requested', reembolsado: 'Refunded' },
       excluirD: 'Your account will be deleted from Kennismarket and you will be signed out. This can’t be undone. Enter your password to confirm.', senhaIncorreta: 'Wrong password.', contaDono: 'An owner account can’t be deleted here.', banida: 'This account is suspended. Please contact support.',
       contasT: 'Accounts', contasD: 'Find an account by name, username or email to create a temporary password or ban it.', busca: 'Name, username or email', buscar: 'Search', min2: 'Type at least 2 characters.', nenhuma: 'No accounts found.', semEmail: 'no email',
       cliente: 'Customer', vendedor: 'Seller', dono: 'Owner', bloqueada: 'Banned', novaSenha: 'New password', banir: 'Ban', desbanir: 'Unban',
       senhaTemp: 'Temporary password (send it to the person; they change it in My account):', senhaT: 'Create a new password?', senhaD: 'The current password will stop working.', banirT: 'Ban this account?', banirD: 'The person is signed out right away and can’t sign in again. You can undo this.' },
-    es: { vDia: 'Último día', v7: 'Últimos 7 días', v30: 'Últimos 30 días', vPeriodo: 'Período', vT: 'Vendedores', vD: 'Todas las cuentas de vendedor con sus ventas (solo pedidos reales y pagados). Haz clic en un vendedor para ver cada venta.', vVend: 'Vendedor', vLoja: 'Tienda', vVendas: 'Ventas', vTotal: 'Total vendido', vSemLoja: 'aún sin tienda', vNenhum: 'Aún no hay vendedores.', vAtualizar: 'Actualizar', vCarregando: 'Cargando…', vData: 'Fecha', vProduto: 'Producto', vValor: 'Valor', vSit: 'Estado', vParte: 'Parte del vendedor', vPct: '{n}% para el vendedor', vNenhumaVenda: 'Aún no hay ventas.', vFechar: 'Cerrar', vRe: '{n} reembolsadas (no se cuentan)', st: { pago: 'Pagado', entregue: 'Entregado', concluido: 'Completado', reembolso_solicitado: 'Reembolso pedido', reembolsado: 'Reembolsado' },
+    es: { mvT: 'Mis ventas', mvD: 'Tus ventas reales y pagadas, y tu parte de cada una.', mvSuaParte: 'Tu parte', mvSemLoja: 'Aún no tienes tienda.', vDia: 'Último día', v7: 'Últimos 7 días', v30: 'Últimos 30 días', vPeriodo: 'Período', vT: 'Vendedores', vD: 'Todas las cuentas de vendedor con sus ventas (solo pedidos reales y pagados). Haz clic en un vendedor para ver cada venta.', vVend: 'Vendedor', vLoja: 'Tienda', vVendas: 'Ventas', vTotal: 'Total vendido', vSemLoja: 'aún sin tienda', vNenhum: 'Aún no hay vendedores.', vAtualizar: 'Actualizar', vCarregando: 'Cargando…', vData: 'Fecha', vProduto: 'Producto', vValor: 'Valor', vSit: 'Estado', vParte: 'Parte del vendedor', vPct: '{n}% para el vendedor', vNenhumaVenda: 'Aún no hay ventas.', vFechar: 'Cerrar', vRe: '{n} reembolsadas (no se cuentan)', st: { pago: 'Pagado', entregue: 'Entregado', concluido: 'Completado', reembolso_solicitado: 'Reembolso pedido', reembolsado: 'Reembolsado' },
       excluirD: 'Tu cuenta se eliminará de Kennismarket y saldrás. No se puede deshacer. Escribe tu contraseña para confirmar.', senhaIncorreta: 'Contraseña incorrecta.', contaDono: 'Una cuenta de dueño no se puede eliminar aquí.', banida: 'Esta cuenta está suspendida. Contacta con soporte.',
       contasT: 'Cuentas', contasD: 'Busca una cuenta por nombre, usuario o correo para crear una contraseña temporal o bloquearla.', busca: 'Nombre, usuario o correo', buscar: 'Buscar', min2: 'Escribe al menos 2 caracteres.', nenhuma: 'No se encontraron cuentas.', semEmail: 'sin correo',
       cliente: 'Cliente', vendedor: 'Vendedor', dono: 'Dueño', bloqueada: 'Bloqueada', novaSenha: 'Nueva contraseña', banir: 'Bloquear', desbanir: 'Desbloquear',
       senhaTemp: 'Contraseña temporal (pásala a la persona; la cambia en Mi cuenta):', senhaT: '¿Crear una contraseña nueva?', senhaD: 'La contraseña actual dejará de funcionar.', banirT: '¿Bloquear esta cuenta?', banirD: 'La persona sale al instante y no puede volver a entrar. Se puede deshacer.' },
-    pt: { vDia: 'Último dia', v7: 'Últimos 7 dias', v30: 'Últimos 30 dias', vPeriodo: 'Período', vT: 'Vendedores', vD: 'Todas as contas de vendedor com as vendas (só pedidos reais e pagos). Clique num vendedor para ver cada venda.', vVend: 'Vendedor', vLoja: 'Loja', vVendas: 'Vendas', vTotal: 'Total vendido', vSemLoja: 'ainda sem loja', vNenhum: 'Ainda não há vendedores.', vAtualizar: 'Atualizar', vCarregando: 'Carregando…', vData: 'Data', vProduto: 'Produto', vValor: 'Valor', vSit: 'Situação', vParte: 'Parte do vendedor', vPct: '{n}% para o vendedor', vNenhumaVenda: 'Nenhuma venda ainda.', vFechar: 'Fechar', vRe: '{n} reembolsada(s) (não contam)', st: { pago: 'Pago', entregue: 'Entregue', concluido: 'Concluído', reembolso_solicitado: 'Reembolso pedido', reembolsado: 'Reembolsado' },
+    pt: { mvT: 'Minhas vendas', mvD: 'Suas vendas reais e pagas, e a sua parte de cada uma.', mvSuaParte: 'Sua parte', mvSemLoja: 'Você ainda não tem loja.', vDia: 'Último dia', v7: 'Últimos 7 dias', v30: 'Últimos 30 dias', vPeriodo: 'Período', vT: 'Vendedores', vD: 'Todas as contas de vendedor com as vendas (só pedidos reais e pagos). Clique num vendedor para ver cada venda.', vVend: 'Vendedor', vLoja: 'Loja', vVendas: 'Vendas', vTotal: 'Total vendido', vSemLoja: 'ainda sem loja', vNenhum: 'Ainda não há vendedores.', vAtualizar: 'Atualizar', vCarregando: 'Carregando…', vData: 'Data', vProduto: 'Produto', vValor: 'Valor', vSit: 'Situação', vParte: 'Parte do vendedor', vPct: '{n}% para o vendedor', vNenhumaVenda: 'Nenhuma venda ainda.', vFechar: 'Fechar', vRe: '{n} reembolsada(s) (não contam)', st: { pago: 'Pago', entregue: 'Entregue', concluido: 'Concluído', reembolso_solicitado: 'Reembolso pedido', reembolsado: 'Reembolsado' },
       excluirD: 'Sua conta será apagada do Kennismarket e você sairá. Isso não pode ser desfeito. Digite sua senha para confirmar.', senhaIncorreta: 'Senha incorreta.', contaDono: 'Conta de dono não pode ser excluída por aqui.', banida: 'Esta conta está suspensa. Fale com o suporte.',
       contasT: 'Contas', contasD: 'Encontre uma conta pelo nome, usuário ou e-mail para gerar uma senha temporária ou banir.', busca: 'Nome, usuário ou e-mail', buscar: 'Buscar', min2: 'Digite pelo menos 2 letras.', nenhuma: 'Nenhuma conta encontrada.', semEmail: 'sem e-mail',
       cliente: 'Cliente', vendedor: 'Vendedor', dono: 'Dono', bloqueada: 'Banida', novaSenha: 'Nova senha', banir: 'Banir', desbanir: 'Desbanir',
@@ -268,6 +268,14 @@
       return r;
     };
 
+    // "Minhas vendas": vendedor com conta real vê as próprias vendas no fim da página Minha conta.
+    var minhaConta = window.vAccount;
+    window.vAccount = function () {
+      var h = minhaConta.apply(this, arguments);
+      if (!(S.user && S.user.contaId && S.user.papel === 'vendedor')) return h;
+      return h.replace(/<\/div>\s*$/, minhasVendasHTML() + '</div>');
+    };
+
     // "Excluir conta": contas reais apagam no servidor, com a senha; as de demonstração, como antes.
     var excluirConta = A.accdel;
     A.accdel = function () {
@@ -347,6 +355,7 @@
       .then(function () { vend.carregando = false; if (S.view === 'admin') redesenharPainel(); });
   }
   function vendedoresHTML() {
+    if (vend.conta !== S.user.contaId) { vend = { lista: null, carregando: false, erro: '', conta: S.user.contaId }; }
     if (!vend.lista && !vend.erro) carregarVendedores();
     var corpo;
     if (vend.erro) corpo = '<p class="err">' + esc(vend.erro) + '</p>';
@@ -366,34 +375,75 @@
     return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px;flex-wrap:wrap"><h3 style="margin:0">' + txt2('vT') + '</h3>' +
       '<button class="btn sm" id="km-vend-atualizar">' + txt2('vAtualizar') + '</button></div><p class="sub">' + txt2('vD') + '</p>' + corpo;
   }
-  function abrirVendedor(id) {
-    var v = (vend.lista || []).filter(function (x) { return x.id === id; })[0];
-    if (!v) return;
-    var st = txt2('st');
-    var lista = v.lista || [];
-    // vendas (sem as reembolsadas) do último dia, dos últimos 7 e dos últimos 30 dias
+  // Tabelas usadas na janela do dono e em "Minhas vendas" do vendedor.
+  function resumoHTML(v, rotuloParte) {
+    return '<div class="sumbox"><div><span>' + txt2('vVendas') + '</span><b>' + v.vendas + '</b></div>' +
+      '<div class="tot"><span>' + txt2('vTotal') + '</span><b>' + reais(v.totalCentavos) + '</b></div>' +
+      '<div class="sub2"><span>' + coin(12) + ' ' + fmtN(v.totalKn) + '</span><span>' + rotuloParte + ': ' + reais(v.vendedorCentavos) + '</span></div>' +
+      (v.reembolsadas ? '<div class="sub2"><span>' + txt2('vRe').replace('{n}', v.reembolsadas) + '</span></div>' : '') + '</div>';
+  }
+  // vendas (sem as reembolsadas) do último dia, dos últimos 7 e dos últimos 30 dias
+  function periodosHTML(lista) {
     var agora = Date.now();
     var periodo = function (dias) {
       var desde = agora - dias * 864e5, n = 0, c = 0;
       lista.forEach(function (x) { if (x.status !== 'reembolsado' && Date.parse(x.data) >= desde) { n++; c += x.valorCentavos; } });
       return '<tr><td>' + txt2(dias === 1 ? 'vDia' : dias === 7 ? 'v7' : 'v30') + '</td><td style="text-align:right"><b>' + n + '</b></td><td style="text-align:right;white-space:nowrap"><b>' + reais(c) + '</b></td></tr>';
     };
-    var periodos = '<div class="fxwrap" style="overflow-x:auto;margin-bottom:12px"><table class="fxt"><thead><tr><th>' + txt2('vPeriodo') + '</th><th style="text-align:right">' + txt2('vVendas') + '</th><th style="text-align:right">' + txt2('vTotal') + '</th></tr></thead><tbody>' +
+    return '<div class="fxwrap" style="overflow-x:auto;margin:12px 0"><table class="fxt"><thead><tr><th>' + txt2('vPeriodo') + '</th><th style="text-align:right">' + txt2('vVendas') + '</th><th style="text-align:right">' + txt2('vTotal') + '</th></tr></thead><tbody>' +
       periodo(1) + periodo(7) + periodo(30) + '</tbody></table></div>';
+  }
+  // cada venda; comParte: coluna com a parte do vendedor (em "Minhas vendas")
+  function vendasHTML(lista, comParte) {
+    var st = txt2('st'), cols = comParte ? 5 : 4;
     var linhas = lista.map(function (x) {
       return '<tr><td>' + esc(dataCurta(x.data)) + '</td><td>' + esc(x.produto || '—') + '</td>' +
         '<td style="text-align:right;white-space:nowrap"><b>' + reais(x.valorCentavos) + '</b><br><small class="muted">' + coin(12) + ' ' + fmtN(x.valorKn) + '</small></td>' +
+        (comParte ? '<td style="text-align:right;white-space:nowrap"><b>' + reais(x.vendedorCentavos) + '</b></td>' : '') +
         '<td><span class="pill ' + (x.status === 'reembolsado' ? 'danger' : x.status === 'reembolso_solicitado' ? 'warn' : 'safe') + '">' + esc(st[x.status] || x.status) + '</span></td></tr>';
-    }).join('') || '<tr><td colspan="4" class="muted" style="display:table-cell;text-align:center;padding:16px">' + txt2('vNenhumaVenda') + '</td></tr>';
+    }).join('') || '<tr><td colspan="' + cols + '" class="muted" style="display:table-cell;text-align:center;padding:16px">' + txt2('vNenhumaVenda') + '</td></tr>';
+    return '<div class="fxwrap" style="overflow-x:auto"><table class="fxt"><thead><tr><th>' + txt2('vData') + '</th><th>' + txt2('vProduto') + '</th><th style="text-align:right">' + txt2('vValor') + '</th>' +
+      (comParte ? '<th style="text-align:right">' + txt2('mvSuaParte') + '</th>' : '') + '<th>' + txt2('vSit') + '</th></tr></thead><tbody>' + linhas + '</tbody></table></div>';
+  }
+  function abrirVendedor(id) {
+    var v = (vend.lista || []).filter(function (x) { return x.id === id; })[0];
+    if (!v) return;
+    var lista = v.lista || [];
     modal('<h2>' + esc(v.nome || v.usuario) + '</h2><p class="sub">' + (v.usuario ? '@' + esc(v.usuario) + ' · ' : '') + (v.loja ? esc(v.loja.nome) + ' · ' + txt2('vPct').replace('{n}', v.loja.porcentagem) : txt2('vSemLoja')) + '</p>' +
-      '<div class="sumbox"><div><span>' + txt2('vVendas') + '</span><b>' + v.vendas + '</b></div>' +
-      '<div class="tot"><span>' + txt2('vTotal') + '</span><b>' + reais(v.totalCentavos) + '</b></div>' +
-      '<div class="sub2"><span>' + coin(12) + ' ' + fmtN(v.totalKn) + '</span><span>' + txt2('vParte') + ': ' + reais(v.vendedorCentavos) + '</span></div>' +
-      (v.reembolsadas ? '<div class="sub2"><span>' + txt2('vRe').replace('{n}', v.reembolsadas) + '</span></div>' : '') + '</div>' +
-      periodos +
-      '<div class="fxwrap" style="overflow-x:auto"><table class="fxt"><thead><tr><th>' + txt2('vData') + '</th><th>' + txt2('vProduto') + '</th><th style="text-align:right">' + txt2('vValor') + '</th><th>' + txt2('vSit') + '</th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
+      resumoHTML(v, txt2('vParte')) + periodosHTML(lista) + vendasHTML(lista, false) +
       '<button class="btn block" data-a="close">' + txt2('vFechar') + '</button>');
   }
+
+  // ---------- "Minhas vendas" na página Minha conta (vendedor com conta real) ----------
+  var minhas = { dados: null, carregando: false, erro: '', conta: null };
+  function minhasVendasHTML() {
+    // trocou de conta (sair e entrar com outra): esquece as vendas da conta anterior
+    if (minhas.conta !== S.user.contaId) minhas = { dados: null, carregando: false, erro: '', conta: S.user.contaId };
+    var pedido = minhas;
+    if (!minhas.dados && !minhas.erro && !minhas.carregando) {
+      minhas.carregando = true;
+      window.kmToken().then(function (t) { return fetch('/api/loja/vendas', { headers: t ? { Authorization: 'Bearer ' + t } : {} }); })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (r) { pedido.dados = r; }, function () { pedido.erro = txt('falha'); })
+        .then(function () { pedido.carregando = false; if (pedido === minhas && S.view === 'conta') { var y = scrollY; render(); scrollTo(0, y); } });
+    }
+    var corpo;
+    if (minhas.erro) corpo = '<p class="err">' + esc(minhas.erro) + '</p>';
+    else if (!minhas.dados) corpo = '<p class="muted">' + txt2('vCarregando') + '</p>';
+    else {
+      var d = minhas.dados;
+      corpo = (d.loja ? '<p class="sub">' + esc(d.loja.nome) + ' · ' + txt2('vPct').replace('{n}', d.loja.porcentagem) + '</p>' : '<p class="muted">' + txt2('mvSemLoja') + '</p>') +
+        resumoHTML(d, txt2('mvSuaParte')) + periodosHTML(d.lista || []) + vendasHTML(d.lista || [], true);
+    }
+    return '<section class="panel" id="km-minhas-vendas" style="margin-bottom:40px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">' +
+      '<h2 style="margin:0">' + txt2('mvT') + '</h2><button class="btn sm" id="km-mv-atualizar">' + txt2('vAtualizar') + '</button></div>' +
+      '<p class="sub">' + txt2('mvD') + '</p>' + corpo + '</section>';
+  }
+  document.addEventListener('click', function (e) {
+    if (e.target && e.target.closest && e.target.closest('#km-mv-atualizar')) {
+      e.preventDefault(); minhas.dados = null; minhas.erro = ''; var y = scrollY; render(); scrollTo(0, y);
+    }
+  });
   document.addEventListener('click', function (e) {
     if (!e.target || !e.target.closest) return;
     if (e.target.closest('#km-vend-atualizar')) { e.preventDefault(); vend.lista = null; vend.erro = ''; carregarVendedores(); return redesenharPainel(); }

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { linhaDoRecebedor, recebedorDoCadastro, recebedorDaLinha } from '../lib/recebimento.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
+import { resumoVendas } from '../lib/vendas.js';
 
 // Área do vendedor sobre a própria loja.
 export function rotasLoja({ repo, pagamentos }) {
@@ -23,6 +24,13 @@ export function rotasLoja({ repo, pagamentos }) {
     const linha = await repo.salvarDadosRecebimento(linhaDoRecebedor(loja.id, recebedor, pagamentos.provedor, resposta));
     if (resposta.situacao === 'recusado') throw erro(400, `o banco recusou os dados de recebimento: ${resposta.motivo || 'sem motivo informado'}`);
     res.json({ situacao: linha.situacao, recebedor: recebedorDaLinha(linha) });
+  }));
+
+  // "Minhas vendas" (página Minha conta do vendedor): as vendas reais da própria loja.
+  r.get('/vendas', rota(async (req, res) => {
+    const loja = await repo.lojaDoVendedor(req.usuario.id);
+    if (!loja) return res.json({ loja: null, ...resumoVendas([]) });
+    res.json({ loja: { nome: loja.nome, porcentagem: loja.porcentagem_vendedor }, ...resumoVendas(await repo.vendasDasLojas([loja.id])) });
   }));
 
   r.get('/recebimento', rota(async (req, res) => {
