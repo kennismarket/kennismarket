@@ -4002,7 +4002,7 @@ function vShopInner(s,at){
           <h2>${tr("revT")}</h2>
           ${!s.reviews?`<p class="muted">${tr("noReviews")}</p>`:`<div class="rev-top"><div class="rev-big"><b>${fmtRating(s.rating)}</b><span class="stars">${Array(5).fill(icon("star",15)).join("")}</span><span class="muted" style="font-size:13px">${tr("reviewsN",{n:fmtN(s.reviews)})}</span></div>
             <div class="bars">${dist.map(([n,p])=>`<div><span>${n}</span><i style="--w:${Math.round(p*100)}%"></i><span>${Math.round(p*s.reviews)}</span></div>`).join("")}</div></div>
-          ${R.slice(0,2).map(r=>`<div class="rev"><div class="who">${esc(r[0])} <span class="stars">${Array(r[1]).fill(icon("star",13)).join("")}</span><span class="tag-ex">${tr("example")}</span></div><p lang="${slang(s)}">${esc(L(r[2],s))}</p></div>`).join("")}`}
+          ${R.slice(0,2).map(r=>`<div class="rev"><div class="who">${esc(r[0])} <span class="stars">${Array(r[1]).fill(icon("star",13)).join("")}</span></div><p lang="${slang(s)}">${esc(L(r[2],s))}</p></div>`).join("")}`}
         </section>
         <section class="panel about2">
           <h2>${tr("aboutT")}</h2>
