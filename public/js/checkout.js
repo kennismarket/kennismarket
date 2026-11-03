@@ -7,6 +7,8 @@
  *   como antes (chat e entrega do protótipo), ligada ao pedido real.
  * - Contas de demonstração, lojas sem vendedor (do dono), a própria loja ou loja que ainda não
  *   disse como recebe: continua a compra de demonstração do protótipo (decisão dos donos).
+ * - A tela antiga "Pagar pedido" do protótipo continua abrindo primeiro (decisão dos donos), só com
+ *   Pix, Boleto e Cartão (em breve); a forma escolhida nela abre a tela nova.
  * - Pagamento simulado (até a Transfeera): a tela mostra "Simular pagamento (teste)".
  * - Conta de demonstração de cliente (pedido dos donos, só para ver como fica): a mesma tela,
  *   mas tudo no navegador — valor pela cotação que o site mostra, Pix e boleto fictícios, e
@@ -20,25 +22,25 @@
   var TXT = {
     nl: { t: 'Bestelling betalen', d: 'Betaal met Pix of boleto. De verkoper begint na de betaling.', doc: 'CPF of CNPJ van de betaler', docErr: 'Vul een geldige CPF of CNPJ in.',
       pix: 'Pix', boleto: 'Boleto', cartao: 'Kaart', embreve: 'binnenkort', genPix: 'Pix aanmaken', genBoleto: 'Boleto aanmaken', protecao: 'Beschermd door support: komt de levering niet overeen met de afspraak, dan beoordeelt support het en betaalt Kennismarket je geld terug.',
-      cotacao: 'Koers van {d}: 1 KN = {v}', aguardando: 'Wachten op betaling…', pago: 'Betaling ontvangen!', simular: 'Betaling simuleren (test)', demoAviso: '<b>Demo:</b> er wordt niets afgeschreven. Op de echte site wordt de betaling automatisch bevestigd.', pixD: 'Kopieer de code en betaal in je bank-app. Deze pagina ziet de betaling vanzelf.',
+      cotacao: 'Koers van {d}: 1 KN = {v}', aguardando: 'Wachten op betaling…', pago: 'Betaling ontvangen!', simular: 'Betaling simuleren (test)', cartaoEmBreve: 'Betalen met kaart komt binnenkort.', demoAviso: '<b>Demo:</b> er wordt niets afgeschreven. Op de echte site wordt de betaling automatisch bevestigd.', pixD: 'Kopieer de code en betaal in je bank-app. Deze pagina ziet de betaling vanzelf.',
       boletoD: 'Betaal de boleto bij je bank. Het kan tot 3 werkdagen duren.', abrirBoleto: 'Boleto openen', umPorVez: 'Koop voorlopig één product per keer (zonder vertaling).', falha: 'Er ging iets mis. Probeer het opnieuw.',
       recT: 'Hoe je betaald wordt', recD: 'Je deel van elke verkoop gaat direct naar deze Pix-sleutel. Zonder dit kan je winkel niet echt verkopen.', recNome: 'Volledige naam of bedrijfsnaam', recDoc: 'CPF of CNPJ', recTipo: 'Type Pix-sleutel', recChave: 'Pix-sleutel', recSalvar: 'Opslaan', recOk: 'Gegevens opgeslagen. Je winkel kan nu verkopen.', recPronto: 'Je ontvangt via Pix', recAlterar: 'Wijzigen', recErr: 'Controleer de gegevens.',
       tipos: { cpf: 'CPF', cnpj: 'CNPJ', email: 'E-mail', telefone: 'Telefoon', aleatoria: 'Willekeurige sleutel' } },
     en: { t: 'Pay for your order', d: 'Pay with Pix or boleto. The seller starts after payment.', doc: 'Payer’s CPF or CNPJ', docErr: 'Enter a valid CPF or CNPJ.',
       pix: 'Pix', boleto: 'Boleto', cartao: 'Card', embreve: 'coming soon', genPix: 'Create Pix', genBoleto: 'Create boleto', protecao: 'Protected by support: if the delivery doesn’t match what was agreed, support reviews it and Kennismarket refunds your money.',
-      cotacao: 'Rate of {d}: 1 KN = {v}', aguardando: 'Waiting for payment…', pago: 'Payment received!', simular: 'Simulate payment (test)', demoAviso: '<b>Demo:</b> nothing is charged. On the real site, payment is confirmed automatically.', pixD: 'Copy the code and pay in your bank app. This page notices the payment by itself.',
+      cotacao: 'Rate of {d}: 1 KN = {v}', aguardando: 'Waiting for payment…', pago: 'Payment received!', simular: 'Simulate payment (test)', cartaoEmBreve: 'Card payment is coming soon.', demoAviso: '<b>Demo:</b> nothing is charged. On the real site, payment is confirmed automatically.', pixD: 'Copy the code and pay in your bank app. This page notices the payment by itself.',
       boletoD: 'Pay the boleto at your bank. It can take up to 3 business days.', abrirBoleto: 'Open boleto', umPorVez: 'For now, buy one product at a time (without translation).', falha: 'Something went wrong. Please try again.',
       recT: 'How you get paid', recD: 'Your share of each sale goes straight to this Pix key. Without it, your store can’t really sell.', recNome: 'Full name or company name', recDoc: 'CPF or CNPJ', recTipo: 'Pix key type', recChave: 'Pix key', recSalvar: 'Save', recOk: 'Details saved. Your store can now sell.', recPronto: 'You get paid by Pix', recAlterar: 'Change', recErr: 'Check the details.',
       tipos: { cpf: 'CPF', cnpj: 'CNPJ', email: 'Email', telefone: 'Phone', aleatoria: 'Random key' } },
     es: { t: 'Pagar pedido', d: 'Paga con Pix o boleto. El vendedor empieza después del pago.', doc: 'CPF o CNPJ de quien paga', docErr: 'Escribe un CPF o CNPJ válido.',
       pix: 'Pix', boleto: 'Boleto', cartao: 'Tarjeta', embreve: 'pronto', genPix: 'Generar Pix', genBoleto: 'Generar boleto', protecao: 'Protegido por soporte: si la entrega no coincide con lo acordado, soporte lo analiza y Kennismarket te devuelve el dinero.',
-      cotacao: 'Cotización del {d}: 1 KN = {v}', aguardando: 'Esperando el pago…', pago: '¡Pago recibido!', simular: 'Simular pago (prueba)', demoAviso: '<b>Demo:</b> no se cobra nada. En el sitio real, el pago se confirma automáticamente.', pixD: 'Copia el código y paga en la app de tu banco. Esta página detecta el pago sola.',
+      cotacao: 'Cotización del {d}: 1 KN = {v}', aguardando: 'Esperando el pago…', pago: '¡Pago recibido!', simular: 'Simular pago (prueba)', cartaoEmBreve: 'El pago con tarjeta llegará pronto.', demoAviso: '<b>Demo:</b> no se cobra nada. En el sitio real, el pago se confirma automáticamente.', pixD: 'Copia el código y paga en la app de tu banco. Esta página detecta el pago sola.',
       boletoD: 'Paga el boleto en tu banco. Puede tardar hasta 3 días hábiles.', abrirBoleto: 'Abrir boleto', umPorVez: 'Por ahora, compra un producto a la vez (sin traducción).', falha: 'Algo salió mal. Inténtalo de nuevo.',
       recT: 'Cómo cobras', recD: 'Tu parte de cada venta va directo a esta clave Pix. Sin esto, tu tienda no puede vender de verdad.', recNome: 'Nombre completo o razón social', recDoc: 'CPF o CNPJ', recTipo: 'Tipo de clave Pix', recChave: 'Clave Pix', recSalvar: 'Guardar', recOk: 'Datos guardados. Tu tienda ya puede vender.', recPronto: 'Cobras por Pix', recAlterar: 'Cambiar', recErr: 'Revisa los datos.',
       tipos: { cpf: 'CPF', cnpj: 'CNPJ', email: 'Correo', telefone: 'Teléfono', aleatoria: 'Clave aleatoria' } },
     pt: { t: 'Pagar pedido', d: 'Pague com Pix ou boleto. O vendedor começa depois do pagamento.', doc: 'CPF ou CNPJ de quem paga', docErr: 'Digite um CPF ou CNPJ válido.',
       pix: 'Pix', boleto: 'Boleto', cartao: 'Cartão', embreve: 'em breve', genPix: 'Gerar Pix', genBoleto: 'Gerar boleto', protecao: 'Protegido pelo suporte: se a entrega não bater com o combinado, o suporte analisa e o Kennismarket devolve o seu dinheiro.',
-      cotacao: 'Cotação de {d}: 1 KN = {v}', aguardando: 'Aguardando o pagamento…', pago: 'Pagamento recebido!', simular: 'Simular pagamento (teste)', demoAviso: '<b>Demonstração:</b> nada é cobrado. No site real, o pagamento é confirmado automaticamente.', pixD: 'Copie o código e pague no app do seu banco. Esta página percebe o pagamento sozinha.',
+      cotacao: 'Cotação de {d}: 1 KN = {v}', aguardando: 'Aguardando o pagamento…', pago: 'Pagamento recebido!', simular: 'Simular pagamento (teste)', cartaoEmBreve: 'O pagamento com cartão chega em breve.', demoAviso: '<b>Demonstração:</b> nada é cobrado. No site real, o pagamento é confirmado automaticamente.', pixD: 'Copie o código e pague no app do seu banco. Esta página percebe o pagamento sozinha.',
       boletoD: 'Pague o boleto no seu banco. Pode levar até 3 dias úteis.', abrirBoleto: 'Abrir boleto', umPorVez: 'Por enquanto, compre um produto por vez (sem tradução).', falha: 'Algo deu errado. Tente de novo.',
       recT: 'Como você recebe', recD: 'A sua parte de cada venda vai direto para esta chave Pix. Sem isso, sua loja não vende de verdade.', recNome: 'Nome completo ou razão social', recDoc: 'CPF ou CNPJ', recTipo: 'Tipo de chave Pix', recChave: 'Chave Pix', recSalvar: 'Salvar', recOk: 'Dados salvos. Sua loja já pode vender.', recPronto: 'Você recebe por Pix', recAlterar: 'Alterar', recErr: 'Confira os dados.',
       tipos: { cpf: 'CPF', cnpj: 'CNPJ', email: 'E-mail', telefone: 'Celular', aleatoria: 'Chave aleatória' } },
@@ -67,10 +69,11 @@
   }
 
   // ---------- tela de pagamento ----------
-  function abrirCheckout(loja, prodIndex, preco) {
-    var forma = (preco.formas || []).indexOf('pix') >= 0 ? 'pix' : (preco.formas || [])[0];
-    var p = loja.prods[prodIndex];
-    var linha = '<div class="sumbox"><div><span>' + esc(L(p.name, loja)) + '</span><b class="cv">' + coin(15) + fmtN(preco.valorKn) + '</b></div>' +
+  // opts: { itens (linhas do resumo), antes (HTML acima do resumo), preco, forma ('pix'|'boleto'), aoPagar(pedido, forma) }
+  function abrirCheckout(opts) {
+    var preco = opts.preco;
+    var forma = opts.forma || ((preco.formas || []).indexOf('pix') >= 0 ? 'pix' : (preco.formas || [])[0]);
+    var linha = (opts.antes || '') + '<div class="sumbox">' + opts.itens +
       '<div class="tot"><span>' + tr('total') + '</span><b>' + reais(preco.valorCentavos) + '</b></div>' +
       '<div class="sub2"><span>' + t('cotacao', { d: dataBr(preco.cotacao.data), v: reais(Math.round(preco.cotacao.brl * 100)) }) + '</span></div></div>';
     function metodos() {
@@ -128,7 +131,7 @@
         try { navigator.clipboard.writeText(o.querySelector('#ck-cod').value).then(function () { toast(tr('copied')); }, function () {}); } catch (e) {}
       };
       var sim = o.querySelector('#ck-sim');
-      if (sim && preco.demo) { sim.onclick = function () { concluir(o, pedido); }; return; }
+      if (sim && preco.demo) { sim.onclick = function () { concluir(pedido); }; return; }
       if (sim) sim.onclick = function () { sim.disabled = true; api('POST', '/api/teste/simular', { pedidoId: pedido.id, tipo: 'pago' }).catch(function () { sim.disabled = false; }); };
       esperar(o, pedido);
     }
@@ -139,7 +142,7 @@
         if (!document.body.contains(o)) return;
         try {
           var p = await api('GET', '/api/pedidos/' + pedido.id);
-          if (p.status === 'pago') return concluir(o, pedido);
+          if (p.status === 'pago') return concluir(pedido);
           if (p.status === 'cancelado') { o.querySelector('#ck-st').textContent = t('falha'); return; }
         } catch (e) {}
         vezes++;
@@ -147,18 +150,72 @@
       };
       setTimeout(conferir, 2000);
     }
-    // Pago: a compra entra no site como no protótipo (chat e entrega), ligada ao pedido real.
-    function concluir(o, pedido) {
+    function concluir(pedido) {
       closeModal();
-      var n = preco.valorKn, id = newId();
-      S.orders[id] = { id: id, shopId: loja.id, reserve: n, amount: n, opt: null, pi: [prodIndex], tl: null, status: 'andamento', created: Date.now(), started: Date.now(), pedidoReal: pedido.id || null };
-      S.tab = 'chat';
-      push(loja.id, { f: 'sys', key: 'm_prodBought', p: { pi: [prodIndex], n: n } });
-      save(); render(); schedule(S.orders[id]); sellerSays(loja.id, 'm_started', {}, 900);
-      toast(t('pago'));
+      opts.aoPagar(pedido, forma);
     }
     modal('', tela1);
   }
+
+  // Compra de um produto (real ou demonstração de cliente). Pago: a compra entra no site como no
+  // protótipo (chat e entrega), ligada ao pedido real quando houver.
+  function checkoutProduto(c, forma) {
+    var p = c.loja.prods[c.prodIndex];
+    abrirCheckout({
+      itens: '<div><span>' + esc(L(p.name, c.loja)) + '</span><b class="cv">' + coin(15) + fmtN(c.preco.valorKn) + '</b></div>',
+      preco: c.preco,
+      forma: forma,
+      aoPagar: function (pedido) {
+        var n = c.preco.valorKn, id = newId(), loja = c.loja;
+        S.orders[id] = { id: id, shopId: loja.id, reserve: n, amount: n, opt: null, pi: [c.prodIndex], tl: null, status: 'andamento', created: Date.now(), started: Date.now(), pedidoReal: pedido.id || null };
+        S.tab = 'chat';
+        push(loja.id, { f: 'sys', key: 'm_prodBought', p: { pi: [c.prodIndex], n: n } });
+        save(); render(); schedule(S.orders[id]); sellerSays(loja.id, 'm_started', {}, 900);
+        toast(t('pago'));
+      },
+    });
+  }
+
+  // Outras compras do protótipo que passam pela tela antiga (vários produtos, reservar KN Coins,
+  // lojas sem venda de verdade, demonstração): a tela nova, toda de mentira, e depois segue o protótipo.
+  function checkoutDemonstracao(c, forma) {
+    var n = c.n, brl = fxRate('BRL');
+    abrirCheckout({
+      antes: c.fx && c.fx.lines ? c.fx.lines : '',
+      itens: '<div><span>KN Coins</span><b class="cv">' + coin(15) + fmtN(n) + '</b></div>',
+      preco: { demo: true, valorKn: n, valorCentavos: Math.round(n * brl * 100), cotacao: { brl: brl, data: FX_DATE }, formas: ['pix', 'boleto'], simulado: true },
+      forma: forma,
+      aoPagar: function (_pedido, f) {
+        S.wallet.av += n;
+        tx('tx_buy', { m: f === 'boleto' ? 'm_boleto' : 'm_pix', cur: 'BRL' }, n, 0);
+        save(); render(); toast(tr('payOkToast'));
+        if (c.after) c.after();
+      },
+    });
+  }
+
+  // ---------- tela antiga "Pagar pedido" (openBuy do protótipo) ----------
+  // Decisão dos donos: a tela antiga continua, só com Pix, Boleto e Cartão (em breve). Clicando
+  // em Pix ou Boleto (ou no botão de baixo), abre a tela nova com essa forma já escolhida.
+  var pendente = null; // compra de produto preparada pelo "comprar" antes de abrir a tela antiga
+  var contexto = null; // a tela antiga aberta agora
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest && e.target.closest('.overlay .sheet .methods3 .method, .overlay .sheet #buy-go');
+    if (!b || !contexto) return;
+    var sheet = b.closest('.sheet');
+    if (!sheet || !sheet.querySelector('.curpick')) return; // só na tela antiga
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    var m = b.id === 'buy-go' ? ((sheet.querySelector('.methods3 .method[aria-pressed="true"]') || {}).dataset || {}).m || 'm_pix' : b.dataset.m;
+    if (m === 'm_card') return toast(t('cartaoEmBreve'));
+    var forma = m === 'm_boleto' ? 'boleto' : 'pix', c = contexto;
+    contexto = null;
+    closeModal();
+    if (c.produto) checkoutProduto(c.produto, forma); else checkoutDemonstracao(c, forma);
+  }, true);
+  var estilo = document.createElement('style');
+  estilo.textContent = '.sheet .methods3 .method[data-m="m_card"]{opacity:.55;cursor:not-allowed}';
+  document.head.appendChild(estilo);
 
   // ---------- "Minha loja": como o vendedor recebe ----------
   var rec = { estado: null, editando: false, carregando: false };
@@ -208,6 +265,16 @@
 
   // ---------- ligar às funções do protótipo (depois que a página carrega) ----------
   document.addEventListener('DOMContentLoaded', function () {
+    window.payMethods = function () { return ['m_pix', 'm_boleto', 'm_card']; };
+    var nomeForma = window.mName;
+    window.mName = function (k) { return k === 'm_card' ? tr('m_card') + ' (' + t('embreve') + ')' : nomeForma.apply(this, arguments); };
+    var telaAntiga = window.openBuy;
+    window.openBuy = function (pre, after, fx) {
+      contexto = { n: Math.max(1, Math.round(pre || 0)), after: after, fx: fx, produto: pendente };
+      pendente = null;
+      return telaAntiga.apply(this, arguments);
+    };
+
     var comprar = A.buyprods;
     A.buyprods = async function () {
       var args = arguments, self = this;
@@ -216,19 +283,22 @@
       if (!S.user || !s || activeOrder(s.id)) return demo();
       var pi = [].map.call(document.querySelectorAll('.pk:checked'), function (x) { return +x.value; });
       if (!pi.length) return demo();
-      var tl0 = document.getElementById('tlk');
+      var tl = document.getElementById('tlk'), umSo = pi.length === 1 && !(tl && tl.checked);
+      var preco = null;
       if (!contaReal()) {
         // conta de demonstração de cliente: a tela nova, toda de mentira (um produto, sem tradução)
-        if (S.user.role !== 'cliente' || pi.length > 1 || (tl0 && tl0.checked)) return demo();
+        if (S.user.role !== 'cliente' || !umSo) return demo();
         var kn = s.prods[pi[0]].price, brl = fxRate('BRL');
-        return abrirCheckout(s, pi[0], { demo: true, valorKn: kn, valorCentavos: Math.round(kn * brl * 100), cotacao: { brl: brl, data: FX_DATE }, formas: ['pix', 'boleto'], simulado: true });
+        preco = { demo: true, valorKn: kn, valorCentavos: Math.round(kn * brl * 100), cotacao: { brl: brl, data: FX_DATE }, formas: ['pix', 'boleto'], simulado: true };
+      } else {
+        try { preco = await api('GET', '/api/pedidos/preco?loja=' + encodeURIComponent(s.id) + '&produto=' + encodeURIComponent(s.prods[pi[0]].id)); } catch (e) { return demo(); }
+        if (!preco.pode) return demo(); // loja sem venda de verdade: compra de demonstração
+        if (!umSo) return toast(t('umPorVez'));
       }
-      var preco;
-      try { preco = await api('GET', '/api/pedidos/preco?loja=' + encodeURIComponent(s.id) + '&produto=' + encodeURIComponent(s.prods[pi[0]].id)); } catch (e) { return demo(); }
-      if (!preco.pode) return demo(); // loja sem venda de verdade: compra de demonstração
-      var tl = document.getElementById('tlk');
-      if (pi.length > 1 || (tl && tl.checked)) return toast(t('umPorVez'));
-      abrirCheckout(s, pi[0], preco);
+      // abre a tela antiga com o produto; a forma escolhida nela abre a tela nova
+      var p = s.prods[pi[0]];
+      pendente = { loja: s, prodIndex: pi[0], preco: preco };
+      openBuy(preco.valorKn, null, { s: s, lines: '<div class="sumbox"><div><span>' + esc(L(p.name, s)) + '</span><b class="cv">' + coin(15) + fmtN(p.price) + '</b></div></div>' });
     };
 
     var minhaLoja = window.vMyStore;
