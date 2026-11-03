@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { Router } from 'express';
 import { debitoDoVendedor } from '../lib/dinheiro.js';
 import { espelharLoja, espelharTodas } from '../lib/espelho-lojas.js';
+import { resumoVendas } from '../lib/vendas.js';
 import { donasDasLojas, idDaLoja } from '../lib/lojas-prototipo.js';
 import { erro, exigirDono, exigirUsuario, rota } from '../lib/seguranca.js';
 
@@ -31,17 +32,10 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
     const lista = vendedores.map((p) => {
       const loja = lojaDe[p.id] || null;
       const todas = loja ? porLoja[loja.id] || [] : [];
-      const validas = todas.filter((v) => v.status !== 'reembolsado');
       return {
         id: p.id, nome: p.nome, usuario: p.usuario, email: p.email.endsWith('.invalid') ? '' : p.email, banida: p.banida,
         loja: loja && { nome: loja.nome, prototipoId: loja.prototipo_id, porcentagem: loja.porcentagem_vendedor, publicada: loja.publicada, banida: loja.banida },
-        vendas: validas.length,
-        reembolsadas: todas.length - validas.length,
-        totalKn: validas.reduce((s, v) => s + v.valor_kn, 0),
-        totalCentavos: validas.reduce((s, v) => s + v.valor_centavos, 0),
-        vendedorCentavos: validas.reduce((s, v) => s + (v.vendedor_centavos || 0), 0),
-        ...(comVendas ? { lista: todas.map((v) => ({ id: v.id, data: v.pago_em || v.criado_em, produto: v.produto_titulo, valorKn: v.valor_kn,
-          valorCentavos: v.valor_centavos, vendedorCentavos: v.vendedor_centavos, status: v.status })) } : {}),
+        ...resumoVendas(todas, { comLista: comVendas }),
       };
     }).sort((a, b) => b.totalCentavos - a.totalCentavos || String(a.nome).localeCompare(String(b.nome)));
     res.json({ vendedores: lista });

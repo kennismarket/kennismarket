@@ -221,13 +221,16 @@
   document.head.appendChild(estilo);
 
   // ---------- "Minha loja": como o vendedor recebe ----------
-  var rec = { estado: null, editando: false, carregando: false };
+  var rec = { estado: null, editando: false, carregando: false, conta: null };
   function painelRecebimento() {
+    // trocou de conta: esquece os dados de recebimento da conta anterior
+    if (rec.conta !== S.user.contaId) rec = { estado: null, editando: false, carregando: false, conta: S.user.contaId };
+    var pedido = rec;
     if (!rec.estado) {
       if (!rec.carregando) {
         rec.carregando = true;
-        api('GET', '/api/loja/recebimento').then(function (r) { rec.estado = r; }, function () { rec.estado = { situacao: 'sem_loja' }; })
-          .then(function () { rec.carregando = false; if (S.view === 'minhaloja') { var y = scrollY; render(); scrollTo(0, y); } });
+        api('GET', '/api/loja/recebimento').then(function (r) { pedido.estado = r; }, function () { pedido.estado = { situacao: 'sem_loja' }; })
+          .then(function () { pedido.carregando = false; if (pedido === rec && S.view === 'minhaloja') { var y = scrollY; render(); scrollTo(0, y); } });
       }
       return '';
     }
