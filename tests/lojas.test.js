@@ -309,3 +309,29 @@ test('checkout: CPF/CNPJ só é obrigatório no boleto; no Pix é opcional', asy
   assert.equal((await comprar({ formaPagamento: 'pix', cpfCnpj: '123' })).s, 400); // se vier, tem que ser válido
   assert.equal((await comprar({ formaPagamento: 'boleto', cpfCnpj: '111.444.777-35' })).s, 201);
 });
+
+test('painel do dono → vendedores: número de vendas, cada venda e total vendido', async () => {
+  const quim = await vendedor('quimtok1', 'quim_v');
+  assert.equal(await gravar('PUT', 'stores/s6800', lojaCompleta(6800), quim.t), 200);
+  const loja = Object.values(repo.tabelas.lojas).find((l) => l.prototipo_id === 6800);
+  const prod = Object.values(repo.tabelas.produtos).find((p) => p.loja_id === loja.id && p.prototipo_id === 'a6800');
+  const ped = (id, status, kn, centavos, criado) => { repo.tabelas.pedidos[id] = { id, loja_id: loja.id, produto_id: prod.id, cliente_id: 'c', status, valor_kn: kn, valor_centavos: centavos, vendedor_centavos: centavos / 2, criado_em: criado }; };
+  ped('q1', 'pago', 100, 60000, '2026-11-01T10:00:00Z');
+  ped('q2', 'concluido', 50, 30000, '2026-11-02T10:00:00Z');
+  ped('q3', 'reembolsado', 20, 12000, '2026-11-02T11:00:00Z');
+  ped('q4', 'aguardando_pagamento', 10, 6000, '2026-11-02T12:00:00Z'); // não é venda
+  const listar = (token, extra = '') => fetch(`${base}/api/admin/vendedores${extra}`, { headers: { Authorization: `Bearer ${token}` } });
+  assert.equal((await listar(cliente)).status, 403);
+  const { vendedores } = await (await listar(dono)).json();
+  const q = vendedores.find((v) => v.usuario === 'quim_v');
+  assert.equal(q.loja.nome, 'Loja 6800');
+  assert.deepEqual([q.vendas, q.reembolsadas, q.totalKn, q.totalCentavos, q.vendedorCentavos], [2, 1, 150, 90000, 45000]);
+  assert.equal(q.lista, undefined);
+  // vendedor sem loja aparece com zero
+  await vendedor('semloja1', 'sem_loja_v');
+  const s = (await (await listar(dono)).json()).vendedores.find((v) => v.usuario === 'sem_loja_v');
+  assert.deepEqual([s.loja, s.vendas, s.totalCentavos], [null, 0, 0]);
+  // com ?vendas=1: cada venda, da mais nova para a mais antiga (reembolsada aparece com a situação)
+  const q2 = (await (await listar(dono, '?vendas=1')).json()).vendedores.find((v) => v.usuario === 'quim_v');
+  assert.deepEqual(q2.lista.map((v) => [v.id, v.status, v.valorCentavos, v.produto]), [['q3', 'reembolsado', 12000, 'Mentoria'], ['q2', 'concluido', 30000, 'Mentoria'], ['q1', 'pago', 60000, 'Mentoria']]);
+});

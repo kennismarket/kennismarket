@@ -34,6 +34,17 @@ function filtrar(q, condicoes = {}) {
   return q;
 }
 
+// Todos os logins do Supabase Auth (de 1000 em 1000; até 10 mil contas).
+async function todosOsLogins() {
+  const logins = [];
+  for (let pagina = 1; pagina <= 10; pagina++) {
+    const { users } = checar(await db().auth.admin.listUsers({ page: pagina, perPage: 1000 }));
+    logins.push(...users);
+    if (users.length < 1000) break;
+  }
+  return logins;
+}
+
 export const repo = {
   async usuarioPorToken(token) {
     const { data, error } = await db().auth.getUser(token);
@@ -96,12 +107,7 @@ export const repo = {
   // milhares de contas; depois disso, trocar por uma busca no banco.
   async buscarContas(termo) {
     const t = termo.toLowerCase();
-    const logins = [];
-    for (let pagina = 1; pagina <= 10; pagina++) {
-      const { users } = checar(await db().auth.admin.listUsers({ page: pagina, perPage: 1000 }));
-      logins.push(...users);
-      if (users.length < 1000) break;
-    }
+    const logins = await todosOsLogins();
     const perfis = checar(await db().from('perfis').select('id, nome, papel, usuario'));
     const porId = Object.fromEntries(perfis.map((p) => [p.id, p]));
     return logins
@@ -109,6 +115,26 @@ export const repo = {
         banida: Boolean(u.banned_until && Date.parse(u.banned_until) > Date.now()), criadaEm: u.created_at }))
       .filter((c) => [c.nome, c.usuario, c.email].some((x) => x && x.toLowerCase().includes(t)))
       .slice(0, 30);
+  },
+  // Painel do dono → Vendedores: todas as contas de vendedor, a loja de cada uma e as vendas.
+  async listarVendedores() {
+    const perfis = checar(await db().from('perfis').select('id, nome, usuario').eq('papel', 'vendedor'));
+    const logins = Object.fromEntries((await todosOsLogins()).map((u) => [u.id, u]));
+    return perfis.map((p) => {
+      const u = logins[p.id] || {};
+      return { ...p, email: u.email || '', banida: Boolean(u.banned_until && Date.parse(u.banned_until) > Date.now()), criadaEm: u.created_at || null };
+    });
+  },
+  async lojasComVendedor() {
+    return checar(await db().from('lojas').select('id, nome, prototipo_id, porcentagem_vendedor, vendedor_id, publicada, banida').not('vendedor_id', 'is', null));
+  },
+  // Vendas (pedidos pagos, e os reembolsados) das lojas, da mais nova para a mais antiga.
+  async vendasDasLojas(lojaIds) {
+    if (!lojaIds.length) return [];
+    const linhas = checar(await db().from('pedidos')
+      .select('id, loja_id, valor_kn, valor_centavos, vendedor_centavos, status, criado_em, pago_em, produto:produtos(titulo)')
+      .in('loja_id', lojaIds).in('status', [...STATUS_PAGOS, 'reembolsado']).order('criado_em', { ascending: false }).limit(5000));
+    return linhas.map(({ produto, ...v }) => ({ ...v, produto_titulo: produto?.titulo || '' }));
   },
   async banirConta(id, banir) {
     checar(await db().auth.admin.updateUserById(id, { ban_duration: banir ? '876000h' : 'none' }));
