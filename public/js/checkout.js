@@ -195,8 +195,9 @@
   }
 
   // ---------- tela antiga "Pagar pedido" (openBuy do protótipo) ----------
-  // Decisão dos donos: a tela antiga continua, só com Pix, Boleto e Cartão (em breve). Clicando
-  // em Pix ou Boleto (ou no botão de baixo), abre a tela nova com essa forma já escolhida.
+  // Decisão dos donos: a tela antiga continua. Com a moeda BRL, só Pix, Boleto e Cartão (em breve),
+  // e clicando em Pix ou Boleto (ou no botão de baixo) abre a tela nova com essa forma escolhida.
+  // Nas outras moedas, tudo como no protótipo (pagamento em outras moedas fica para mais tarde).
   var pendente = null; // compra de produto preparada pelo "comprar" antes de abrir a tela antiga
   var contexto = null; // a tela antiga aberta agora
   document.addEventListener('click', function (e) {
@@ -204,6 +205,8 @@
     if (!b || !contexto) return;
     var sheet = b.closest('.sheet');
     if (!sheet || !sheet.querySelector('.curpick')) return; // só na tela antiga
+    var moeda = sheet.querySelector('.curb[aria-pressed="true"]');
+    if (!moeda || moeda.dataset.c !== 'BRL') return; // outras moedas: como no protótipo
     e.preventDefault();
     e.stopImmediatePropagation();
     var m = b.id === 'buy-go' ? ((sheet.querySelector('.methods3 .method[aria-pressed="true"]') || {}).dataset || {}).m || 'm_pix' : b.dataset.m;
@@ -214,7 +217,7 @@
     if (c.produto) checkoutProduto(c.produto, forma); else checkoutDemonstracao(c, forma);
   }, true);
   var estilo = document.createElement('style');
-  estilo.textContent = '.sheet .methods3 .method[data-m="m_card"]{opacity:.55;cursor:not-allowed}';
+  estilo.textContent = '.sheet.km-brl .methods3 .method[data-m="m_card"]{opacity:.55;cursor:not-allowed}';
   document.head.appendChild(estilo);
 
   // ---------- "Minha loja": como o vendedor recebe ----------
@@ -265,9 +268,19 @@
 
   // ---------- ligar às funções do protótipo (depois que a página carrega) ----------
   document.addEventListener('DOMContentLoaded', function () {
-    window.payMethods = function () { return ['m_pix', 'm_boleto', 'm_card']; };
+    // Só no real: Pix, Boleto e Cartão (em breve). Marca a tela antiga com "km-brl" para o cartão aparecer apagado.
+    var moedaDaTela = null;
+    var formasDoPrototipo = window.payMethods;
+    window.payMethods = function (c) {
+      moedaDaTela = c;
+      setTimeout(function () {
+        var sh = document.querySelector('.overlay .sheet');
+        if (sh && sh.querySelector('.curpick')) sh.classList.toggle('km-brl', c === 'BRL');
+      }, 0);
+      return c === 'BRL' ? ['m_pix', 'm_boleto', 'm_card'] : formasDoPrototipo.apply(this, arguments);
+    };
     var nomeForma = window.mName;
-    window.mName = function (k) { return k === 'm_card' ? tr('m_card') + ' (' + t('embreve') + ')' : nomeForma.apply(this, arguments); };
+    window.mName = function (k) { return k === 'm_card' && moedaDaTela === 'BRL' ? tr('m_card') + ' (' + t('embreve') + ')' : nomeForma.apply(this, arguments); };
     var telaAntiga = window.openBuy;
     window.openBuy = function (pre, after, fx) {
       contexto = { n: Math.max(1, Math.round(pre || 0)), after: after, fx: fx, produto: pendente };
