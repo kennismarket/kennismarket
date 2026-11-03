@@ -71,7 +71,19 @@ test('PDF de entrega: só com link assinado, e o link só para vendedor, dono e 
   assert.equal((await pedir('GET', doCliente.j.url)).s, 200);
 });
 
-test('com a trava desligada (padrão), tudo continua como antes', async () => {
+test('lojas de demonstração (do dono, sem vendedor) e arquivos antigos sem loja continuam abertos', async () => {
+  const loja = { store: { id: 7002, n: 'Loja do dono', c: 'ebooks', prods: [{ id: 'd1', name: ['Ebook', 'Ebook', 'E-book', 'Ebook'], price: 10 }] }, ts: 1 };
+  assert.equal((await pedir('PUT', '/api/prototipo/docs/stores/s7002', { corpo: JSON.stringify({ dados: loja }), token: dono })).s, 200);
+  const pdf = (await pedir('POST', '/api/prototipo/arquivos', { corpo: '%PDF-1.4 demo', tipo: 'application/pdf', token: dono })).j.id;
+  await pedir('PUT', '/api/prototipo/docs/delivfiles/p-d1-pt-1', { corpo: JSON.stringify({ dados: { pkey: 'pd1', lg: 'pt', asset: pdf, name: 'demo.pdf' } }), token: dono });
+  assert.equal((await pedir('GET', `/_blob/${pdf}`)).s, 200);
+  assert.equal((await pedir('GET', `/api/prototipo/arquivos/${pdf}/link`)).j.url, `/_blob/${pdf}`);
+  const antigo = (await pedir('POST', '/api/prototipo/arquivos', { corpo: '%PDF-1.4 antigo', tipo: 'application/pdf', token: dono })).j.id;
+  await pedir('PUT', '/api/prototipo/docs/delivfiles/f-antigo', { corpo: JSON.stringify({ dados: { asset: antigo, name: 'antigo.pdf' } }), token: dono });
+  assert.equal((await pedir('GET', `/_blob/${antigo}`)).s, 200);
+});
+
+test('com a trava desligada (ENTREGAS_SO_PAGAS=false), tudo continua como antes', async () => {
   const { criarApp } = await import('../server/app.js');
   const r2 = criarRepoMemoria();
   const srv = criarApp({ repo: r2, entregasSoPagas: false }).listen(0);

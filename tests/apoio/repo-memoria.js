@@ -129,7 +129,7 @@ export function criarRepoMemoria() {
     },
 
     async criarPedido(campos) {
-      const p = { status: 'aguardando_pagamento', repasse_status: 'aguardando', cobranca_id: null, ...campos };
+      const p = { status: 'aguardando_pagamento', repasse_status: 'aguardando', cobranca_id: null, criado_em: new Date().toISOString(), ...campos };
       t.pedidos[p.id] = p;
       return copia(p);
     },
@@ -145,6 +145,30 @@ export function criarRepoMemoria() {
       return mudou;
     },
 
+    async listarPedidos({ clienteId, lojaId, ids, status } = {}) {
+      return Object.values(t.pedidos)
+        .filter((p) => (!clienteId || p.cliente_id === clienteId) && (!lojaId || p.loja_id === lojaId) && (!ids || ids.includes(p.id)) && (!status || status.includes(p.status)))
+        .sort((a, b) => String(b.criado_em || '').localeCompare(String(a.criado_em || '')))
+        .map((p) => {
+          const loja = t.lojas[p.loja_id] || {};
+          const produto = t.produtos[p.produto_id] || {};
+          const cliente = t.contas[p.cliente_id] || Object.values(t.usuarios).find((u) => u.id === p.cliente_id) || {};
+          return { ...copia(p), loja_nome: loja.nome || '', loja_prototipo_id: loja.prototipo_id ?? null, loja_vendedor_id: loja.vendedor_id ?? null,
+            produto_titulo: produto.titulo || '', produto_prototipo_id: produto.prototipo_id ?? null, cliente_nome: cliente.nome || '' };
+        });
+    },
+    async concluirEntreguesAntes(limite) {
+      const agora = new Date().toISOString();
+      const mudou = [];
+      for (const p of Object.values(t.pedidos)) {
+        if (p.status === 'entregue' && p.entregue_em && p.entregue_em < limite) {
+          Object.assign(p, { status: 'concluido', concluido_em: agora });
+          mudou.push({ id: p.id });
+        }
+      }
+      return mudou;
+    },
+
     async eventoJaProcessado(provedor, id) { return t.eventos.has(`${provedor}|${id}`); },
     async registrarEvento(provedor, id) { t.eventos.add(`${provedor}|${id}`); },
 
@@ -152,7 +176,7 @@ export function criarRepoMemoria() {
       if (Object.values(t.reembolsos).some((r) => r.pedido_id === campos.pedido_id && r.status === 'em_analise')) {
         throw Object.assign(new Error('Supabase: duplicate key'), { codigo: '23505' });
       }
-      const r = { id: crypto.randomUUID(), status: 'em_analise', ...campos };
+      const r = { id: crypto.randomUUID(), status: 'em_analise', criado_em: new Date().toISOString(), ...campos };
       t.reembolsos[r.id] = r;
       return copia(r);
     },
@@ -163,11 +187,15 @@ export function criarRepoMemoria() {
       Object.assign(r, campos);
       return [copia(r)];
     },
+    async listarReembolsos({ status, pedidoIds, limite = 100 } = {}) {
+      return Object.values(t.reembolsos).filter((r) => (!status || status.includes(r.status)) && (!pedidoIds || pedidoIds.includes(r.pedido_id)))
+        .sort((a, b) => String(b.criado_em || '').localeCompare(String(a.criado_em || ''))).slice(0, limite).map(copia);
+    },
     async criarDebito(campos) {
       if (Object.values(t.debitos).some((d) => d.reembolso_id === campos.reembolso_id)) {
         throw Object.assign(new Error('Supabase: duplicate key'), { codigo: '23505' });
       }
-      const d = { id: crypto.randomUUID(), situacao: 'aberto', ...campos };
+      const d = { id: crypto.randomUUID(), situacao: 'aberto', criado_em: new Date().toISOString(), ...campos };
       t.debitos[d.id] = d;
       return copia(d);
     },

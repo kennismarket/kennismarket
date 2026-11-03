@@ -172,7 +172,7 @@ test('cópia da loja no documento do vendedor: sem inventar nota e sem apontar p
   // loja dela, criada pelo convite: só no documento do vendedor
   assert.equal(await gravar('PUT', 'sellers/acc-kimtok1', { acc: { ...acc, storeId: 5600, store: { id: 5600, n: 'Kim', rating: 5, ver: true, sales: 99 } } }, kim.t), 200);
   const s1 = (await doc('sellers', 'acc-kimtok1')).acc.store;
-  assert.deepEqual([s1.rating, s1.ver, s1.sales], [undefined, undefined, undefined]);
+  assert.deepEqual([s1.rating, s1.ver, s1.sales], [undefined, undefined, 0]); // vendas começa em 0 (a tela mostrava "NaN")
   // depois ela grava a loja na coleção de lojas (o editor do protótipo faz isso): é a mesma loja dela
   assert.equal(await gravar('PUT', 'stores/s5600', loja(5600), kim.t), 200);
   // apontar a conta para uma loja do dono do site: não

@@ -32,7 +32,7 @@ export const TIPOS = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif',
 // - delivfiles (arquivos de entrega): o dono do site, ou o vendedor da loja do produto.
 // - sellers/acc-*: o dono do site; o vendedor, só o próprio documento (sem trocar a conta).
 // Contas de demonstração (sem login) não gravam nada.
-// Links assinados dos arquivos de entrega (quando ENTREGAS_SO_PAGAS está ligado): valem 10 minutos.
+// Links assinados dos arquivos de entrega (quando ENTREGAS_SO_PAGAS está ligado, o padrão): valem 10 minutos.
 const SEGREDO_LINKS = config.supabase.secretKey
   ? crypto.createHash('sha256').update(`links-entrega|${config.supabase.secretKey}`).digest()
   : crypto.randomBytes(32); // sem Supabase (testes locais): muda a cada vez que o servidor liga
@@ -156,8 +156,13 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
     }
     if (acc.store && typeof acc.store === 'object') {
       const store = { ...acc.store };
+      // sem cópia anterior: vale o que está na loja publicada (e vendas começa em 0, nunca vazio)
+      const publicada = (await repo.listarDocsPrototipo('stores')).find((d) => idDaLoja(d.id) === Number(store.id))?.dados?.store || {};
       for (const campo of CAMPOS_DO_DONO) {
-        if (atual.acc.store && campo in atual.acc.store) store[campo] = atual.acc.store[campo]; else delete store[campo];
+        if (atual.acc.store && campo in atual.acc.store) store[campo] = atual.acc.store[campo];
+        else if (campo in publicada) store[campo] = publicada[campo];
+        else if (campo === 'sales') store.sales = 0;
+        else delete store[campo];
       }
       acc.store = store;
     }
@@ -229,6 +234,17 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
 
   // Arquivos de entrega: quais documentos usam este arquivo (vazio = não é entrega, ex.: logo).
   const entregasDoArquivo = async (id) => (await repo.listarDocsPrototipo('delivfiles')).filter((d) => d.dados?.asset === id);
+  // A trava vale só para as lojas de vendedores reais (decisão dos donos): as lojas de
+  // demonstração (do dono, sem vendedor) e os arquivos antigos sem loja ("f-…") continuam abertos.
+  const trancado = async (entregas) => {
+    if (!entregas.length) return false;
+    const donas = await donasDasLojas(repo);
+    for (const d of entregas) {
+      const lojaId = await lojaDoProduto(repo, pkeyDoArquivo(d.id, d.dados));
+      if (lojaId != null && donas[lojaId]) return true;
+    }
+    return false;
+  };
   // Pode abrir o arquivo de entrega? Dono, quem enviou, o vendedor da loja ou quem pagou o produto.
   const podeAbrir = async (u, id, entregas) => {
     if (!u) return false;
@@ -251,7 +267,7 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
     if (!ID_ARQUIVO.test(req.params.id)) throw erro(400, 'id inválido');
     if (!entregasSoPagas) return res.json({ url: `/_blob/${req.params.id}` });
     const entregas = await entregasDoArquivo(req.params.id);
-    if (!entregas.length) return res.json({ url: `/_blob/${req.params.id}` });
+    if (!(await trancado(entregas))) return res.json({ url: `/_blob/${req.params.id}` });
     const u = await usuarioDe(req);
     if (!(await podeAbrir(u, req.params.id, entregas))) throw negar(u, 'arquivo liberado só depois do pagamento');
     res.json({ url: linkAssinado(req.params.id) });
@@ -285,7 +301,7 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
     if (!ID_ARQUIVO.test(req.params.id)) throw erro(404, 'arquivo não encontrado');
     // Trava ligada: arquivo de entrega só abre com o link assinado (logos e imagens continuam abertos).
     const assinado = entregasSoPagas && assinaturaValida(req.params.id, req.query.ate, req.query.ass);
-    if (entregasSoPagas && !assinado && (await entregasDoArquivo(req.params.id)).length) throw erro(403, 'arquivo liberado só depois do pagamento');
+    if (entregasSoPagas && !assinado && await trancado(await entregasDoArquivo(req.params.id))) throw erro(403, 'arquivo liberado só depois do pagamento');
     const a = await repo.lerArquivoPrototipo(req.params.id);
     if (!a) throw erro(404, 'arquivo não encontrado');
     res.set({

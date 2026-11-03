@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { concluirEntreguesVencidos, pedidoParaTela, STATUS_DEPOIS_DE_PAGO, ultimoReembolsoPorPedido } from '../lib/pedidos.js';
 import { linhaDoRecebedor, recebedorDoCadastro, recebedorDaLinha } from '../lib/recebimento.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
 import { resumoVendas } from '../lib/vendas.js';
@@ -31,6 +32,19 @@ export function rotasLoja({ repo, pagamentos }) {
     const loja = await repo.lojaDoVendedor(req.usuario.id);
     if (!loja) return res.json({ loja: null, ...resumoVendas([]) });
     res.json({ loja: { nome: loja.nome, porcentagem: loja.porcentagem_vendedor }, ...resumoVendas(await repo.vendasDasLojas([loja.id])) });
+  }));
+
+  // "Minha loja → Pedidos": os pedidos reais pagos da própria loja, com o primeiro nome do cliente.
+  r.get('/pedidos', rota(async (req, res) => {
+    const loja = await repo.lojaDoVendedor(req.usuario.id);
+    if (!loja) return res.json({ loja: null, pedidos: [] });
+    await concluirEntreguesVencidos(repo);
+    const lista = await repo.listarPedidos({ lojaId: loja.id, status: STATUS_DEPOIS_DE_PAGO });
+    const rbs = ultimoReembolsoPorPedido(await repo.listarReembolsos({ pedidoIds: lista.map((p) => p.id), limite: 1000 }));
+    res.json({
+      loja: { nome: loja.nome, prototipoId: loja.prototipo_id, porcentagem: loja.porcentagem_vendedor },
+      pedidos: lista.map((p) => pedidoParaTela(p, { comCliente: true, reembolso: rbs[p.id] })),
+    });
   }));
 
   r.get('/recebimento', rota(async (req, res) => {

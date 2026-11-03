@@ -243,6 +243,28 @@ export const repo = {
     return checar(await filtrar(q, condicoes).select());
   },
 
+  // Pedidos com a loja, o produto e o nome do cliente (telas de pedidos, etapa 4).
+  // Filtros: clienteId, lojaId, ids, status (lista). Do mais novo para o mais antigo.
+  async listarPedidos({ clienteId, lojaId, ids, status } = {}) {
+    let q = db().from('pedidos')
+      .select('*, loja:lojas(nome, prototipo_id, vendedor_id), produto:produtos(titulo, prototipo_id), cliente:perfis(nome)')
+      .order('criado_em', { ascending: false }).limit(500);
+    if (clienteId) q = q.eq('cliente_id', clienteId);
+    if (lojaId) q = q.eq('loja_id', lojaId);
+    if (ids) { if (!ids.length) return []; q = q.in('id', ids); }
+    if (status) q = q.in('status', status);
+    return checar(await q).map(({ loja, produto, cliente, ...p }) => ({
+      ...p, loja_nome: loja?.nome || '', loja_prototipo_id: loja?.prototipo_id ?? null, loja_vendedor_id: loja?.vendedor_id ?? null,
+      produto_titulo: produto?.titulo || '', produto_prototipo_id: produto?.prototipo_id ?? null, cliente_nome: cliente?.nome || '',
+    }));
+  },
+  // Confirmação automática: pedidos entregues antes de "limite" (data ISO) viram concluídos.
+  async concluirEntreguesAntes(limite) {
+    const agora = new Date().toISOString();
+    return checar(await db().from('pedidos').update({ status: 'concluido', concluido_em: agora, atualizado_em: agora })
+      .eq('status', 'entregue').lt('entregue_em', limite).select('id'));
+  },
+
   // ---------- avisos do banco de pagamento ----------
   async eventoJaProcessado(provedor, id) {
     return Boolean(checar(await db().from('eventos_pagamento').select('id').eq('provedor', provedor).eq('id', id).maybeSingle()));
@@ -260,6 +282,13 @@ export const repo = {
   },
   async atualizarReembolso(id, campos, condicoes) {
     return checar(await filtrar(db().from('reembolsos').update(campos).eq('id', id), condicoes).select());
+  },
+  // Pedidos de reembolso, do mais novo para o mais antigo. status: lista (vazio = todos).
+  async listarReembolsos({ status, pedidoIds, limite = 100 } = {}) {
+    let q = db().from('reembolsos').select('*').order('criado_em', { ascending: false }).limit(limite);
+    if (status) q = q.in('status', status);
+    if (pedidoIds) { if (!pedidoIds.length) return []; q = q.in('pedido_id', pedidoIds); }
+    return checar(await q);
   },
   async criarDebito(campos) {
     return checar(await db().from('debitos_vendedor').insert(campos).select().single());
