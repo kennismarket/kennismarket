@@ -17,6 +17,36 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
   // sozinho a cada gravação e ao ligar; isto serve para conferir ou consertar).
   r.post('/lojas/copiar', rota(async (_req, res) => res.json(await espelharTodas(repo))));
 
+  // ---------- vendedores (seção "Contas" do painel do dono) ----------
+  // Cada vendedor com a loja, o número de vendas e o total vendido; ?vendas=1 traz cada venda.
+  // Venda = pedido pago (inclui entregue, concluído e com reembolso pedido). Reembolsados aparecem
+  // na lista com a situação, mas não entram no número nem no total.
+  r.get('/vendedores', rota(async (req, res) => {
+    const [vendedores, lojas] = await Promise.all([repo.listarVendedores(), repo.lojasComVendedor()]);
+    const lojaDe = Object.fromEntries(lojas.map((l) => [l.vendedor_id, l]));
+    const vendas = await repo.vendasDasLojas(lojas.map((l) => l.id));
+    const porLoja = {};
+    for (const v of vendas) (porLoja[v.loja_id] ||= []).push(v);
+    const comVendas = req.query.vendas === '1';
+    const lista = vendedores.map((p) => {
+      const loja = lojaDe[p.id] || null;
+      const todas = loja ? porLoja[loja.id] || [] : [];
+      const validas = todas.filter((v) => v.status !== 'reembolsado');
+      return {
+        id: p.id, nome: p.nome, usuario: p.usuario, email: p.email.endsWith('.invalid') ? '' : p.email, banida: p.banida,
+        loja: loja && { nome: loja.nome, prototipoId: loja.prototipo_id, porcentagem: loja.porcentagem_vendedor, publicada: loja.publicada, banida: loja.banida },
+        vendas: validas.length,
+        reembolsadas: todas.length - validas.length,
+        totalKn: validas.reduce((s, v) => s + v.valor_kn, 0),
+        totalCentavos: validas.reduce((s, v) => s + v.valor_centavos, 0),
+        vendedorCentavos: validas.reduce((s, v) => s + (v.vendedor_centavos || 0), 0),
+        ...(comVendas ? { lista: todas.map((v) => ({ id: v.id, data: v.pago_em || v.criado_em, produto: v.produto_titulo, valorKn: v.valor_kn,
+          valorCentavos: v.valor_centavos, vendedorCentavos: v.vendedor_centavos, status: v.status })) } : {}),
+      };
+    }).sort((a, b) => b.totalCentavos - a.totalCentavos || String(a.nome).localeCompare(String(b.nome)));
+    res.json({ vendedores: lista });
+  }));
+
   // ---------- contas (seção "Contas" do painel do dono) ----------
   // Busca por nome, usuário ou e-mail. O e-mail interno (sem e-mail) não aparece.
   r.get('/contas', rota(async (req, res) => {

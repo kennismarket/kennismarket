@@ -52,6 +52,18 @@ export function criarRepoMemoria() {
         .map((c) => ({ id: c.id, nome: c.nome, usuario: c.usuario, papel: c.papel, email: c.email, banida: Boolean(c.banida) }))
         .filter((c) => [c.nome, c.usuario, c.email].some((x) => x && x.toLowerCase().includes(busca)));
     },
+    async listarVendedores() {
+      return Object.values(t.contas).filter((c) => c.papel === 'vendedor')
+        .map((c) => ({ id: c.id, nome: c.nome, usuario: c.usuario, email: c.email, banida: Boolean(c.banida), criadaEm: null }));
+    },
+    async lojasComVendedor() { return Object.values(t.lojas).filter((l) => l.vendedor_id).map(copia); },
+    async vendasDasLojas(lojaIds) {
+      return Object.values(t.pedidos)
+        .filter((p) => lojaIds.includes(p.loja_id) && ['pago', 'entregue', 'concluido', 'reembolso_solicitado', 'reembolsado'].includes(p.status))
+        .sort((a, b) => String(b.criado_em || '').localeCompare(String(a.criado_em || '')))
+        .map((p) => ({ id: p.id, loja_id: p.loja_id, valor_kn: p.valor_kn, valor_centavos: p.valor_centavos, vendedor_centavos: p.vendedor_centavos,
+          status: p.status, criado_em: p.criado_em || null, pago_em: p.pago_em || null, produto_titulo: t.produtos[p.produto_id]?.titulo || '' }));
+    },
     async banirConta(id, banir) {
       t.contas[id].banida = banir;
       if (banir) for (const [tok, u] of Object.entries(t.usuarios)) if (u.id === id) delete t.usuarios[tok];
