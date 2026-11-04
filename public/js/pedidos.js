@@ -284,15 +284,16 @@
   async function sincronizarVendedor(forcar) {
     if (!contaReal() || S.user.papel !== 'vendedor' || !S.myStore || vend.carregando) return;
     var conta = S.user.contaId;
-    if (!forcar && vend.conta === conta && Date.now() - vend.ultimo < 20000) return;
+    if (!forcar && vend.conta === conta + '|' + S.myStore.id && Date.now() - vend.ultimo < 20000) return;
     vend.carregando = true;
     try {
-      var r = await api('GET', '/api/loja/pedidos');
+      var lojaAberta = S.myStore.id;
+      var r = await api('GET', '/api/loja/pedidos?loja=' + encodeURIComponent(lojaAberta));
       if (!S.user || S.user.contaId !== conta || !S.myStore) return;
       if (!r.loja || r.loja.prototipoId !== S.myStore.id) return;
       var mudou = false;
       r.pedidos.forEach(function (p) { mudou = aplicarPedidoVendedor(p) || mudou; });
-      vend.conta = conta; vend.ultimo = Date.now();
+      vend.conta = conta + '|' + lojaAberta; vend.ultimo = Date.now();
       if (mudou) { save(); if (S.view === 'minhaloja') redesenhar(); }
     } catch (e) { /* tenta de novo depois */ } finally { vend.carregando = false; }
   }

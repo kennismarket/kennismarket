@@ -55,22 +55,22 @@
   };
   // Faturamento (etapa 6): "Faturamento da conta" (Minha conta) e "Faturamento da loja" (Minha loja).
   var TXT6 = {
-    nl: { fcT: 'Omzet van het account', fcD: 'Alle echte verkopen van je winkels bij elkaar, en wat je ontvangen hebt.', flT: 'Omzet van de winkel', flD: 'De echte verkopen van deze winkel en wat je ervan ontvangen hebt.',
+    nl: { demo: 'Demo: berekend met de gesimuleerde bestellingen in deze browser (koers van vandaag; de overboeking staat altijd als ontvangen).', fcT: 'Omzet van het account', fcD: 'Alle echte verkopen van je winkels bij elkaar, en wat je ontvangen hebt.', flT: 'Omzet van de winkel', flD: 'De echte verkopen van deze winkel en wat je ervan ontvangen hebt.',
       recebido: 'Ontvangen op je Pix-sleutel', processando: 'In verwerking bij de bank', aReceber: 'Nog te ontvangen (overboeking mislukt: support lost het op)', debitos: 'Open schulden (terugbetalingen)', saldo: 'Saldo',
       porLoja: 'Per winkel', semVendasLoja: 'Deze winkel heeft nog geen echte verkopen.', seusDebitos: 'Schulden door terugbetalingen', debitosD: 'Jouw deel van terugbetalingen die support heeft goedgekeurd. Kennismarket neemt contact op voor de betaling.',
       repasse: 'Overboeking', rep: { repassado: 'Ontvangen', processando: 'In verwerking', aguardando: 'In verwerking', falhou: 'Mislukt' }, sit: { aberto: 'Open', quitado: 'Betaald', perdoado: 'Kwijtgescholden' },
       quitar: 'Betaald', perdoar: 'Kwijtschelden', reabrir: 'Heropenen' },
-    en: { fcT: 'Account revenue', fcD: 'All real sales of your stores together, and what you have received.', flT: 'Store revenue', flD: 'This store’s real sales and what you have received from them.',
+    en: { demo: 'Demo: calculated from the simulated orders in this browser (today’s rate; the transfer always shows as received).', fcT: 'Account revenue', fcD: 'All real sales of your stores together, and what you have received.', flT: 'Store revenue', flD: 'This store’s real sales and what you have received from them.',
       recebido: 'Received on your Pix key', processando: 'Being processed by the bank', aReceber: 'Still to receive (transfer failed: support fixes it)', debitos: 'Open debts (refunds)', saldo: 'Balance',
       porLoja: 'By store', semVendasLoja: 'This store has no real sales yet.', seusDebitos: 'Debts from refunds', debitosD: 'Your share of refunds approved by support. Kennismarket will contact you about payment.',
       repasse: 'Transfer', rep: { repassado: 'Received', processando: 'Processing', aguardando: 'Processing', falhou: 'Failed' }, sit: { aberto: 'Open', quitado: 'Paid', perdoado: 'Forgiven' },
       quitar: 'Paid', perdoar: 'Forgive', reabrir: 'Reopen' },
-    es: { fcT: 'Facturación de la cuenta', fcD: 'Todas las ventas reales de tus tiendas juntas, y lo que recibiste.', flT: 'Facturación de la tienda', flD: 'Las ventas reales de esta tienda y lo que recibiste de ellas.',
+    es: { demo: 'Demo: calculado con los pedidos simulados de este navegador (cotización de hoy; la transferencia siempre aparece como recibida).', fcT: 'Facturación de la cuenta', fcD: 'Todas las ventas reales de tus tiendas juntas, y lo que recibiste.', flT: 'Facturación de la tienda', flD: 'Las ventas reales de esta tienda y lo que recibiste de ellas.',
       recebido: 'Recibido en tu clave Pix', processando: 'En proceso en el banco', aReceber: 'Por recibir (falló la transferencia: soporte lo resuelve)', debitos: 'Deudas abiertas (reembolsos)', saldo: 'Saldo',
       porLoja: 'Por tienda', semVendasLoja: 'Esta tienda aún no tiene ventas reales.', seusDebitos: 'Deudas por reembolsos', debitosD: 'Tu parte de los reembolsos aprobados por soporte. Kennismarket te contactará para el pago.',
       repasse: 'Transferencia', rep: { repassado: 'Recibido', processando: 'En proceso', aguardando: 'En proceso', falhou: 'Falló' }, sit: { aberto: 'Abierta', quitado: 'Pagada', perdoado: 'Perdonada' },
       quitar: 'Pagada', perdoar: 'Perdonar', reabrir: 'Reabrir' },
-    pt: { fcT: 'Faturamento da conta', fcD: 'Todas as vendas reais das suas lojas juntas, e o que você já recebeu.', flT: 'Faturamento da loja', flD: 'As vendas reais desta loja e o que você já recebeu delas.',
+    pt: { demo: 'Demonstração: calculado com os pedidos simulados deste navegador (cotação de hoje; o repasse aparece sempre como recebido).', fcT: 'Faturamento da conta', fcD: 'Todas as vendas reais das suas lojas juntas, e o que você já recebeu.', flT: 'Faturamento da loja', flD: 'As vendas reais desta loja e o que você já recebeu delas.',
       recebido: 'Recebido na sua chave Pix', processando: 'Processando no banco', aReceber: 'A receber (o repasse falhou: o suporte resolve)', debitos: 'Débitos em aberto (reembolsos)', saldo: 'Saldo',
       porLoja: 'Por loja', semVendasLoja: 'Esta loja ainda não tem vendas reais.', seusDebitos: 'Débitos de reembolsos', debitosD: 'A sua parte dos reembolsos aprovados pelo suporte. O Kennismarket entra em contato para o acerto.',
       repasse: 'Repasse', rep: { repassado: 'Recebido', processando: 'Processando', aguardando: 'Processando', falhou: 'Falhou' }, sit: { aberto: 'Em aberto', quitado: 'Quitado', perdoado: 'Perdoado' },
@@ -297,7 +297,7 @@
     var minhaLojaTela = window.vMyStore;
     window.vMyStore = function () {
       var h = minhaLojaTela.apply(this, arguments);
-      if (!(S.user && S.user.contaId && S.user.papel === 'vendedor' && S.myStore)) return h;
+      if (!((S.user && S.user.contaId && S.user.papel === 'vendedor') || vendedorDemo()) || !S.myStore) return h;
       var ancora = '<div class="seg" role="group">';
       return h.indexOf(ancora) < 0 ? h : h.replace(ancora, faturamentoLojaHTML(S.myStore.id) + ancora);
     };
@@ -306,7 +306,7 @@
     var minhaConta = window.vAccount;
     window.vAccount = function () {
       var h = minhaConta.apply(this, arguments);
-      if (!(S.user && S.user.contaId && S.user.papel === 'vendedor')) return h;
+      if (!((S.user && S.user.contaId && S.user.papel === 'vendedor') || vendedorDemo())) return h;
       return h.replace(/<\/div>\s*$/, minhasVendasHTML() + '</div>');
     };
 
@@ -497,9 +497,44 @@
   function painelFaturamento(id, titulo, desc, corpo) {
     return '<section class="panel" id="' + id + '" style="margin-bottom:' + (id === 'km-minhas-vendas' ? '40px' : '18px') + '"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">' +
       '<h2 style="margin:0">' + titulo + '</h2><button class="btn sm" data-km-fat-atualizar>' + txt2('vAtualizar') + '</button></div>' +
-      '<p class="sub">' + desc + '</p>' + corpo + '</section>';
+      '<p class="sub">' + desc + '</p>' + (vendedorDemo() ? '<div class="callout warn" style="margin-bottom:12px">' + icon('alert', 16) + '<span>' + txt6('demo') + '</span></div>' : '') + corpo + '</section>';
+  }
+  // Conta de demonstração de vendedor (pedido dos donos, só para ver como fica): os mesmos painéis,
+  // com números calculados a partir dos pedidos simulados de cada loja (public/js/lojas.js).
+  function vendedorDemo() { return S.user && !S.user.contaId && S.user.role === 'vendedor'; }
+  function dadosDemo() {
+    var brl = typeof fxRate === 'function' ? fxRate('BRL') : 6;
+    var STATUS = { pago: 'pago', chat: 'pago', entregue: 'entregue', 'case': 'reembolso_solicitado', refunded: 'reembolsado' };
+    var lojas = (window.kmLojasDaConta ? window.kmLojasDaConta() : (S.myStore ? [{ loja: S.myStore, pedidos: S.sorders || [] }] : []));
+    var resumo = function (vendas, debitos) {
+      var validas = vendas.filter(function (v) { return v.status !== 'reembolsado'; });
+      var soma = function (l, k) { return l.reduce(function (t, v) { return t + (v[k] || 0); }, 0); };
+      var r = { vendas: validas.length, reembolsadas: vendas.length - validas.length, totalKn: soma(validas, 'valorKn'), totalCentavos: soma(validas, 'valorCentavos'),
+        vendedorCentavos: soma(validas, 'vendedorCentavos'), recebidoCentavos: soma(vendas, 'vendedorCentavos'), processandoCentavos: 0, aReceberCentavos: 0,
+        debitoAbertoCentavos: soma(debitos, 'valorCentavos'), debitos: debitos, lista: vendas };
+      r.saldoCentavos = r.recebidoCentavos - r.debitoAbertoCentavos;
+      return r;
+    };
+    var todas = [], todosDebitos = [];
+    var porLoja = lojas.map(function (x) {
+      var st = x.loja, pct = typeof pctOf === 'function' ? pctOf(st) : 50;
+      var vendas = x.pedidos.filter(function (o) { return STATUS[o.status]; }).map(function (o) {
+        var c = Math.round((o.amount || 0) * brl * 100), parte = c - Math.floor(c * (100 - pct) / 100);
+        var produto = '';
+        try { produto = o.pi ? L(st.prods[o.pi[0]].name, st) + (o.pi.length > 1 ? ' +' + (o.pi.length - 1) : '') : L(st.tiers[o.opt][0], st); } catch (e) {}
+        return { id: o.id, data: new Date(o.ts || Date.now()).toISOString(), produto: produto, loja: st.n, valorKn: o.amount || 0, valorCentavos: c,
+          vendedorCentavos: parte, status: STATUS[o.status], repasse: 'repassado' };
+      });
+      var debitos = vendas.filter(function (v) { return v.status === 'reembolsado'; })
+        .map(function (v) { return { id: 'd' + v.id, valorCentavos: v.vendedorCentavos, situacao: 'aberto', data: v.data, produto: v.produto }; });
+      todas = todas.concat(vendas); todosDebitos = todosDebitos.concat(debitos);
+      return Object.assign({ nome: st.n, prototipoId: st.id, porcentagem: pct }, resumo(vendas, debitos));
+    });
+    todas.sort(function (a, b) { return Date.parse(b.data) - Date.parse(a.data); });
+    return Object.assign(resumo(todas, todosDebitos), { lojas: porLoja });
   }
   function estadoFaturamento() {
+    if (vendedorDemo()) { minhas = { dados: dadosDemo(), carregando: false, erro: '', conta: null, demo: true }; return null; }
     carregarFaturamento();
     if (minhas.erro) return '<p class="err">' + esc(minhas.erro) + '</p>';
     if (!minhas.dados) return '<p class="muted">' + txt2('vCarregando') + '</p>';

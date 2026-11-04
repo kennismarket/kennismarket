@@ -215,5 +215,13 @@ do $$ begin
   exception when unique_violation then null; end;
 end $$;
 
+-- 0007: várias lojas por conta
+do $$ begin
+  insert into lojas (vendedor_id, nome, slug, prototipo_id) values
+    ('00000000-0000-0000-0000-00000000000c', 'Segunda loja', 'loja-p77', 77),
+    ('00000000-0000-0000-0000-00000000000c', 'Terceira loja', 'loja-p78', 78);
+  assert (select count(*) from lojas where vendedor_id = '00000000-0000-0000-0000-00000000000c') >= 3, 'uma conta com várias lojas';
+end $$;
+
 rollback;
 \echo 'BANCO: todas as verificações passaram'

@@ -4,7 +4,7 @@ import { config } from '../config.js';
 import { codigoDoErro, iaDisponivel, responderSuporte, validarTurnos } from '../lib/ia.js';
 import { limitePorIp } from '../lib/limite.js';
 import { espelharDepois } from '../lib/espelho-lojas.js';
-import { CAMPOS_DO_DONO, SPLIT_MAX, SPLIT_MIN, donasDasLojas, idDaLoja, lojaDoProduto, pkeyDoArquivo } from '../lib/lojas-prototipo.js';
+import { CAMPOS_DO_DONO, MAX_LOJAS_POR_CONTA, SPLIT_MAX, SPLIT_MIN, donasDasLojas, idDaLoja, lojaDoProduto, pkeyDoArquivo } from '../lib/lojas-prototipo.js';
 import { DOMINIO_TESTE, erro, rota } from '../lib/seguranca.js';
 
 // Recursos que o protótipo usava do claude.ai, agora guardados no Supabase:
@@ -117,8 +117,10 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
         return { ...dados, store, contaDona: atual.contaDona ?? u.id, banida: false };
       }
       if (metodo === 'DELETE') return null;
-      // uma loja por vendedor (a dele pode já existir só no documento do vendedor)
-      if (donas[lojaId] !== u.id && Object.values(donas).includes(u.id)) throw erro(409, 'você já tem uma loja');
+      // até 10 lojas por conta (decisão dos donos)
+      if (donas[lojaId] !== u.id && Object.values(donas).filter((c) => c === u.id).length >= MAX_LOJAS_POR_CONTA) {
+        throw erro(409, `limite de ${MAX_LOJAS_POR_CONTA} lojas por conta`);
+      }
       if (donas[lojaId] != null && donas[lojaId] !== u.id) throw negar(u, 'esta loja não é sua');
       const store = { ...dados.store };
       delete store.split;

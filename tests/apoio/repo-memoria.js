@@ -89,9 +89,6 @@ export function criarRepoMemoria() {
     async lojaPorPrototipo(pid) { return copia(Object.values(t.lojas).find((l) => l.prototipo_id === pid)); },
     async produtoPorPrototipo(lojaId, pid) { return copia(Object.values(t.produtos).find((p) => p.loja_id === lojaId && p.prototipo_id === pid)); },
     async salvarLojaEspelho(loja, produtos) {
-      if (loja.vendedor_id) {
-        for (const l of Object.values(t.lojas)) if (l.vendedor_id === loja.vendedor_id && l.prototipo_id !== loja.prototipo_id) Object.assign(l, { vendedor_id: null, publicada: false });
-      }
       let l = Object.values(t.lojas).find((x) => x.prototipo_id === loja.prototipo_id);
       if (!l) { l = { id: crypto.randomUUID(), porcentagem_vendedor: 50 }; t.lojas[l.id] = l; }
       Object.assign(l, loja, { slug: `loja-p${loja.prototipo_id}` });

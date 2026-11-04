@@ -83,9 +83,8 @@ Pago  →  Entregue  →  Concluído (o cliente confirma, ou sozinho 7 dias depo
 - **4**: feita (seção acima); falta testar com a Transfeera e marcar débitos como quitados.
 - **5**: chat real cliente ↔ vendedor (hoje as respostas do vendedor são simuladas).
 - **6**: feita (Faturamento da conta e da loja). Falta testar o repasse com a Transfeera.
-- **Várias lojas por conta** (pedido dos donos em 04/11/2026): os painéis de faturamento já somam todas as lojas, mas
-  o site ainda só permite uma loja por conta. Liberar exige: migração tirando o "único" de `lojas.vendedor_id`, as
-  regras de quem grava cada loja (etapa 2), o painel "Como você recebe" por loja e um seletor de loja em "Minha loja".
+- **Várias lojas por conta**: feito (04/11/2026). Até 10 lojas por conta, seletor e "Criar outra loja" em Minha loja,
+  Pix e pedidos por loja; a conta de demonstração de vendedor mostra tudo isso no navegador.
 - **7**: convites enviados por e-mail (precisa do Resend).
 - **Login**: recuperar senha do cliente por e-mail e confirmação de e-mail (precisam do Resend).
 - **Textos**: Carteira como histórico (sem saldo) e os textos de garantia e reembolso do protótipo que ainda

@@ -37,7 +37,7 @@ const gravar = async (metodo, caminho, dados, token) => {
 const doc = async (c, id) => (await repo.listarDocsPrototipo(c)).find((d) => d.id === id)?.dados;
 const loja = (id, extra = {}) => ({ store: { id, n: `Loja ${id}`, prods: [{ id: `x${id}`, name: ['P'], price: 10 }], ...extra }, ts: 1 });
 
-test('vendedor cria a própria loja (uma só), edita só a dele, e não muda nota, vendas, selo nem porcentagem', async () => {
+test('vendedor cria as próprias lojas, edita só a dele, e não muda nota, vendas, selo nem porcentagem', async () => {
   const ana = await vendedor('anatok1', 'ana_v');
   const bia = await vendedor('biatok1', 'bia_v');
   assert.equal(await gravar('PUT', 'stores/s5001', loja(5001), null), 401);
@@ -48,8 +48,11 @@ test('vendedor cria a própria loja (uma só), edita só a dele, e não muda not
   const d = await doc('stores', 's5001');
   assert.equal(d.contaDona, ana.id);
   assert.equal(d.store.split, undefined);
-  // segunda loja: não
-  assert.equal(await gravar('PUT', 'stores/s5002', loja(5002), ana.t), 409);
+  // segunda loja: pode (várias lojas por conta, até 10); depois ela apaga
+  assert.equal(await gravar('PUT', 'stores/s5002', loja(5002), ana.t), 200);
+  assert.equal((await doc('stores', 's5002')).contaDona, ana.id);
+  assert.equal(await gravar('DELETE', 'stores/s5002', null, bia.t), 403); // loja alheia
+  assert.equal(await gravar('DELETE', 'stores/s5002', null, ana.t), 200);
   // id do documento tem que bater com o da loja
   assert.equal(await gravar('PUT', 'stores/s5003', loja(9999), bia.t), 400);
 

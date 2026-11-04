@@ -3,17 +3,36 @@ import { concluirEntreguesVencidos, pedidoParaTela, STATUS_DEPOIS_DE_PAGO, ultim
 import { linhaDoRecebedor, recebedorDoCadastro, recebedorDaLinha } from '../lib/recebimento.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
 import { resumoFaturamento } from '../lib/vendas.js';
+import { MAX_LOJAS_POR_CONTA, idDaLoja, lojasDaConta } from '../lib/lojas-prototipo.js';
 
-// Área do vendedor sobre a própria loja.
+// Área do vendedor sobre as próprias lojas (até 10 por conta). As rotas de uma loja recebem
+// qual loja em ?loja=<id da loja no protótipo>; sem isso, vale a primeira loja da conta.
 export function rotasLoja({ repo, pagamentos }) {
   const r = Router();
   r.use(exigirUsuario(repo, pagamentos));
 
-  async function minhaLoja(req) {
-    const loja = await repo.lojaDoVendedor(req.usuario.id);
-    if (!loja) throw erro(404, 'você ainda não tem loja');
+  async function minhaLoja(req, { obrigatoria = true } = {}) {
+    const pid = req.query.loja ?? req.body?.loja;
+    let loja;
+    if (pid != null && pid !== '') {
+      loja = Number.isInteger(Number(pid)) ? await repo.lojaPorPrototipo(Number(pid)) : null;
+      if (!loja || loja.vendedor_id !== req.usuario.id) throw erro(404, 'loja não encontrada');
+    } else {
+      loja = await repo.lojaDoVendedor(req.usuario.id);
+    }
+    if (!loja && obrigatoria) throw erro(404, 'você ainda não tem loja');
     return loja;
   }
+
+  // As lojas da conta (seletor "Suas lojas" em Minha loja) e o limite.
+  r.get('/minhas', rota(async (req, res) => {
+    const ids = await lojasDaConta(repo, req.usuario.id);
+    const docs = Object.fromEntries((await repo.listarDocsPrototipo('stores')).map((d) => [idDaLoja(d.id), d.dados]));
+    res.json({
+      limite: MAX_LOJAS_POR_CONTA,
+      lojas: ids.map((id) => ({ prototipoId: id, nome: docs[id]?.store?.n || '', banida: Boolean(docs[id]?.banida) })),
+    });
+  }));
 
   // Como o vendedor recebe. Não cria conta em banco nenhum: só os dados para o split.
   // ⚠️ Campos a ajustar quando chegar a documentação do banco de pagamento.
@@ -47,7 +66,7 @@ export function rotasLoja({ repo, pagamentos }) {
 
   // "Minha loja → Pedidos": os pedidos reais pagos da própria loja, com o primeiro nome do cliente.
   r.get('/pedidos', rota(async (req, res) => {
-    const loja = await repo.lojaDoVendedor(req.usuario.id);
+    const loja = await minhaLoja(req, { obrigatoria: false });
     if (!loja) return res.json({ loja: null, pedidos: [] });
     await concluirEntreguesVencidos(repo);
     const lista = await repo.listarPedidos({ lojaId: loja.id, status: STATUS_DEPOIS_DE_PAGO });
@@ -61,7 +80,14 @@ export function rotasLoja({ repo, pagamentos }) {
   r.get('/recebimento', rota(async (req, res) => {
     const loja = await minhaLoja(req);
     const linha = await repo.dadosRecebimento(loja.id);
-    if (!linha) return res.json({ situacao: 'nao_cadastrado' });
+    if (!linha) {
+      // loja nova: sugere os dados de outra loja da conta (o vendedor só confirma ou troca)
+      for (const outra of await repo.lojasDoVendedor(req.usuario.id)) {
+        const l2 = outra.id !== loja.id && await repo.dadosRecebimento(outra.id);
+        if (l2) return res.json({ situacao: 'nao_cadastrado', sugestao: true, recebedor: recebedorDaLinha(l2) });
+      }
+      return res.json({ situacao: 'nao_cadastrado' });
+    }
     res.json({ situacao: linha.provedor === pagamentos.provedor ? linha.situacao : 'confirmar_de_novo', recebedor: recebedorDaLinha(linha) });
   }));
 
