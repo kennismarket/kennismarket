@@ -12,14 +12,14 @@ name: Tarefas agendadas
 
 on:
   schedule:
-    - cron: '30 16 * * *' # cotações: todo dia, depois que o Banco Central Europeu publica
+    - cron: '30 16 * * *' # todo dia, depois que o Banco Central Europeu publica: cotações e pedidos
   workflow_dispatch:      # botão "Run workflow" para rodar na mão
     inputs:
       tarefa:
         description: Qual tarefa rodar
         type: choice
-        options: [cotacoes]
-        default: cotacoes
+        options: [todas, cotacoes, pedidos]
+        default: todas
 
 permissions: {}
 
@@ -40,15 +40,23 @@ jobs:
           fi
           # Ignora quebras de linha e espaços que sobrem nas pontas ao colar o segredo (o site faz o mesmo).
           TAREFAS_TOKEN=$(printf '%s' "$TAREFAS_TOKEN" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-          TAREFA="${ESCOLHIDA:-cotacoes}"
-          echo "Tarefa: $TAREFA"
-          # O servidor pode levar ~1 minuto para acordar: tenta algumas vezes.
-          # O repositório é público, então a resposta não é mostrada no log (só o código HTTP).
-          RESPOSTA=$(mktemp)
-          CODIGO=$(curl -sS -o "$RESPOSTA" -w '%{http_code}' --retry 4 --retry-delay 20 --retry-all-errors \
-            --max-time 120 -X POST -H "x-tarefas-token: $TAREFAS_TOKEN" "${SITE_URL%/}/api/tarefas/$TAREFA")
-          echo "Resposta do site: HTTP $CODIGO"
-          if [ "$CODIGO" = "401" ]; then
-            echo "::error::O site recusou a senha. O segredo TAREFAS_TOKEN do GitHub tem que ser igual ao TAREFAS_TOKEN do Render. Veja ${SITE_URL%/}/api/saude: em \"tarefas\", o token tem que estar \"preenchido\"."
-          fi
-          [ "$CODIGO" = "200" ]
+          # cotacoes: cotação do euro do dia; pedidos: conclui os entregues há mais de 7 dias sem confirmação.
+          case "${ESCOLHIDA:-todas}" in
+            todas) TAREFAS="cotacoes pedidos" ;;
+            *) TAREFAS="$ESCOLHIDA" ;;
+          esac
+          FALHOU=0
+          for TAREFA in $TAREFAS; do
+            echo "Tarefa: $TAREFA"
+            # O servidor pode levar ~1 minuto para acordar: tenta algumas vezes.
+            # O repositório é público, então a resposta não é mostrada no log (só o código HTTP).
+            RESPOSTA=$(mktemp)
+            CODIGO=$(curl -sS -o "$RESPOSTA" -w '%{http_code}' --retry 4 --retry-delay 20 --retry-all-errors \
+              --max-time 120 -X POST -H "x-tarefas-token: $TAREFAS_TOKEN" "${SITE_URL%/}/api/tarefas/$TAREFA") || true
+            echo "Resposta do site: HTTP $CODIGO"
+            if [ "$CODIGO" = "401" ]; then
+              echo "::error::O site recusou a senha. O segredo TAREFAS_TOKEN do GitHub tem que ser igual ao TAREFAS_TOKEN do Render. Veja ${SITE_URL%/}/api/saude: em \"tarefas\", o token tem que estar \"preenchido\"."
+            fi
+            [ "$CODIGO" = "200" ] || FALHOU=1
+          done
+          [ "$FALHOU" = "0" ]

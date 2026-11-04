@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
 import { debitoDoVendedor } from '../lib/dinheiro.js';
+import { DIAS_CONFIRMACAO_AUTOMATICA } from '../lib/pedidos.js';
 import { espelharLoja, espelharTodas } from '../lib/espelho-lojas.js';
 import { resumoVendas } from '../lib/vendas.js';
 import { donasDasLojas, idDaLoja } from '../lib/lojas-prototipo.js';
@@ -146,6 +147,34 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
       }
     }
     res.json({ reembolso, debito, ...(aviso ? { aviso } : {}) });
+  }));
+
+  // Painel do dono → Casos de suporte: pedidos de reembolso reais (em análise e os últimos
+  // decididos) e os débitos dos vendedores, com a loja, o produto e o cliente de cada pedido.
+  r.get('/casos', rota(async (_req, res) => {
+    const [abertos, decididos, debitos] = await Promise.all([
+      repo.listarReembolsos({ status: ['em_analise'], limite: 200 }),
+      repo.listarReembolsos({ status: ['aprovado', 'negado'], limite: 20 }),
+      repo.listarDebitos(),
+    ]);
+    const ids = [...new Set([...abertos, ...decididos, ...debitos].map((x) => x.pedido_id))];
+    const pedidos = Object.fromEntries((await repo.listarPedidos({ ids })).map((p) => [p.id, p]));
+    const pedidoDe = (id) => {
+      const p = pedidos[id];
+      return p ? {
+        id: p.id, status: p.status, valorKn: p.valor_kn, valorCentavos: p.valor_centavos, vendedorCentavos: p.vendedor_centavos,
+        porcentagemVendedor: 100 - (p.taxa_percentual ?? 50), loja: { nome: p.loja_nome, prototipoId: p.loja_prototipo_id },
+        produto: p.produto_titulo, cliente: p.cliente_nome, pagoEm: p.pago_em || null, entregueEm: p.entregue_em || null,
+      } : null;
+    };
+    const caso = (rb) => ({ id: rb.id, status: rb.status, motivo: rb.motivo, statusAnterior: rb.status_anterior, criadoEm: rb.criado_em || null,
+      decididoEm: rb.decidido_em || null, valorCentavos: rb.valor_centavos ?? null, pedido: pedidoDe(rb.pedido_id) });
+    res.json({
+      abertos: abertos.map(caso),
+      decididos: decididos.map(caso),
+      debitos: debitos.map((d) => ({ id: d.id, valorCentavos: d.valor_centavos, situacao: d.situacao, criadoEm: d.criado_em || null, pedido: pedidoDe(d.pedido_id) })),
+      diasConfirmacao: DIAS_CONFIRMACAO_AUTOMATICA,
+    });
   }));
 
   // Débitos de vendedores (anotados nos reembolsos). ?situacao=aberto para só os em aberto.

@@ -29,64 +29,45 @@
 | 0d | Provedor real da Transfeera (sandbox), quando chegar a documentação e as credenciais | aguardando documentação |
 | 0e | Versão de demonstração: o site é o protótipo, com lojas, PDFs, convites e contas no Supabase | feito |
 | 1 | Cadastro e login (Supabase), perfis de cliente e vendedor | feito (falta: recuperar senha do cliente por e-mail) |
-| 2 | Lojas e produtos (com lojas e avaliações de mentira na versão de testes), upload de arquivos | feito: lojas seguras, cópia nas tabelas reais, porcentagem por loja no pedido; trava "arquivos só para quem pagou" pronta, a ligar com o checkout |
+| 2 | Lojas e produtos (com lojas e avaliações de mentira na versão de testes), upload de arquivos | feito: lojas seguras, cópia nas tabelas reais, porcentagem por loja no pedido; trava "arquivos só para quem pagou" ligada nas lojas de vendedores reais |
 | 3 | Tela de checkout no site (o servidor de pagamento já está pronto, com o simulado) | feito com o pagamento simulado (um produto por vez; vendedor cadastra o Pix). Falta: provedor real da Transfeera (etapa 0d), comprar vários produtos/tradução e pagar a proposta do chat (com a etapa 5) |
-| 4 | Telas de pedidos, entrega e reembolso + painel do suporte | próximo: plano e decisões pendentes em "Etapa 4" abaixo |
+| 4 | Telas de pedidos, entrega e reembolso + painel do suporte | feito (03/11/2026) com o pagamento simulado. Falta: testar com a Transfeera (etapa 0d) e o chat real (etapa 5) |
 | 5 | Chat cliente ↔ vendedor | |
 | 6 | Painel do vendedor com o valor a receber | |
 | 7 | Links de convite (só donos) | |
 | — | Revisão de segurança por um dev antes de ligar dinheiro real | obrigatório |
 
-## Etapa 4 — pedidos, entrega e reembolso (próxima)
+## Etapa 4 — pedidos, entrega e reembolso (feita em 03/11/2026)
 
-O que acontece **depois que o cliente paga**. Hoje o pagamento já é real (simulado), mas o depois ainda é a
-demonstração do protótipo: o "vendedor" do chat é um robô que entrega sozinho, e os pedidos de reembolso
-(`S.cases`) ficam só no navegador. A etapa 4 liga essas telas aos **pedidos reais** do servidor.
-
-### Como o pedido anda
+O que acontece **depois que o cliente paga**, ligado aos pedidos reais do servidor (só contas reais; contas de
+demonstração e lojas do dono continuam com o pedido de mentira do protótipo).
 
 ```
-Pago  →  Entregue  →  Concluído
+Pago  →  Entregue  →  Concluído (o cliente confirma, ou sozinho 7 dias depois da entrega)
   │          │            │
-  └──────────┴────────────┴──→  Reembolso pedido  →  Reembolsado  (dono aprova)
+  └──────────┴────────────┴──→  Reembolso pedido  →  Reembolsado, total ou parcial (dono aprova)
                                                   →  volta como estava (dono nega)
 ```
 
-1. **Pago**: aparece para o cliente (Meus pedidos), para o vendedor (Minha loja → Pedidos) e para os donos
-   (tabela de vendedores, que já existe).
-2. **Entregue**: o vendedor entrega (arquivos ou serviço) e clica em "Marcar como entregue" (só depois de pago).
-3. **Concluído**: o cliente clica em "Confirmar recebimento".
-4. **Reembolso**: a qualquer momento depois de pago, o cliente clica em "Solicitar reembolso" e conta o motivo.
-   Nunca automático: vai para Painel do dono → Casos de suporte. Aprovar = devolve em reais pelo módulo de
-   pagamento (simulado por enquanto), saindo do caixa do Kennismarket, e anota o débito do vendedor (a parte
-   dele, proporcional). Negar = o pedido volta à situação anterior.
+- **Cliente → Meus pedidos / chat da loja**: os pedidos reais aparecem; o robô do protótipo não entrega mais
+  sozinho; "Recebi, está tudo certo" confirma; "Abrir chamado" (na entrega) ou "Solicitar reembolso" (pago ou
+  concluído) pede reembolso com o motivo.
+- **Vendedor → Minha loja → Pedidos**: os pedidos reais da loja, com "Entregar".
+- **Dono → Chamados de suporte**: pedidos de reembolso reais com "Devolver ao comprador" (total ou parcial, mostra
+  o débito do vendedor) e "Negar"; últimos decididos; débitos dos vendedores.
+- Rotas novas: `GET /api/pedidos`, `GET /api/loja/pedidos`, `GET /api/admin/casos`, `POST /api/tarefas/pedidos`.
 
-### O que já existe no servidor (não precisa refazer)
-- `POST /api/pedidos/:id/entregue` (vendedor, só de `pago`), `POST /api/pedidos/:id/recebido` (cliente, só de
-  `entregue`), `POST /api/pedidos/:id/reembolso` (cliente, de `pago`/`entregue`/`concluido`, com motivo).
-- `POST /api/admin/reembolsos/:id` (dono: aprovar com valor total ou parcial, ou negar; chama
-  `devolverPagamento` e anota o débito), `GET /api/admin/debitos`.
-- A compra real já cria a compra local do protótipo com `pedidoReal` (o id do pedido no servidor).
+### Decisões tomadas (recomendações do plano)
+1. **Confirmação automática em 7 dias** depois de "Entregue" (concluído ainda aceita pedido de reembolso).
+2. **Trava dos PDFs ligada só nas lojas de vendedores reais** (as de demonstração continuam abertas).
+3. **Reembolso parcial: sim.**
 
-### O que falta fazer (telas, só para contas reais)
-- **Cliente → Meus pedidos**: listar os pedidos reais (loja, produto, valor, data, situação), com
-  "Confirmar recebimento" e "Solicitar reembolso". Rota nova para o cliente listar os próprios pedidos.
-- **Vendedor → Minha loja**: listar os pedidos reais recebidos, com "Marcar como entregue". Rota nova para o
-  vendedor listar os pedidos da loja. Nos pedidos reais, desligar o robô do protótipo que "entrega sozinho".
-- **Dono → Casos de suporte** (seção que já existe no painel do protótipo): os pedidos de reembolso reais, com
-  Aprovar (total ou parcial) e Negar, e a lista de débitos dos vendedores. Rota nova para listar os pedidos de
-  reembolso em análise.
-- **Contas de demonstração e lojas do dono**: continuam com o pedido de mentira do protótipo (decisão dos donos).
-- Fica para a **etapa 5 (chat real)**: a conversa e a proposta paga pelo chat. Na etapa 4, a entrega de produtos
-  prontos (PDFs) é pelos arquivos que o vendedor já sobe na loja.
-
-### Decisões pendentes (perguntar aos donos antes de começar)
-1. **Confirmação automática**: se o cliente não confirmar, o pedido vira Concluído sozinho depois de quantos dias
-   do "Entregue"? Recomendado: **7 dias** (mesmo concluído, o cliente ainda pode pedir reembolso).
-2. **Trava dos PDFs** (`ENTREGAS_SO_PAGAS`, pronta e desligada): recomendado ligar **só nas lojas de vendedores
-   reais**, para os PDFs deles ficarem só para quem pagou e as lojas de demonstração continuarem abertas
-   (precisa de um ajuste: hoje a trava vale para todas as lojas).
-3. **Reembolso parcial**: permitir devolver só parte do valor ao aprovar? Recomendado: **sim** (o servidor já aceita).
+### O que ficou para depois
+- Testar o caminho completo com a Transfeera de verdade (sandbox), quando chegar a documentação (etapa 0d).
+- Etapa 5 (chat real): a conversa e a proposta paga pelo chat. Hoje, "Pedir ajuste" e as mensagens nos pedidos
+  reais ficam só no navegador, e o "vendedor" ainda responde com as falas prontas do protótipo.
+- Marcar um débito como quitado/perdoado no painel (hoje só a lista).
+- Carteira como histórico (os reembolsos ainda não aparecem lá).
 
 ## O que falta no projeto (lista completa, atualizada em 03/11/2026)
 
@@ -99,7 +80,7 @@ Pago  →  Entregue  →  Concluído
 - Mais para frente: pagamento de verdade nas outras moedas (hoje só BRL; nas outras, a tela antiga do protótipo).
 
 **Próximas etapas**
-- **4**: pedidos, entrega e reembolso de verdade (seção acima).
+- **4**: feita (seção acima); falta testar com a Transfeera e marcar débitos como quitados.
 - **5**: chat real cliente ↔ vendedor (hoje as respostas do vendedor são simuladas).
 - **6**: painel do vendedor com o valor a receber ("Minhas vendas", em Minha conta, já adianta uma parte).
 - **7**: convites enviados por e-mail (precisa do Resend).

@@ -43,7 +43,7 @@ export const config = {
   // Senha que a tarefa agendada do GitHub manda para disparar a atualização das cotações.
   tarefasToken: limpo(env.TAREFAS_TOKEN),
   suporteEmail: 'kennismarket.support@protonmail.com',
-  // Arquivos de entrega (PDFs) só para quem pagou. Desligado até o checkout existir: hoje as
-  // compras do site são simuladas no navegador, e ligar isto trancaria as entregas de todo mundo.
-  entregasSoPagas: limpo(env.ENTREGAS_SO_PAGAS) === 'true',
+  // Arquivos de entrega (PDFs) só para quem pagou, nas lojas de vendedores reais (as lojas de
+  // demonstração continuam abertas). Ligado por padrão desde a etapa 4; ENTREGAS_SO_PAGAS=false desliga.
+  entregasSoPagas: limpo(env.ENTREGAS_SO_PAGAS) !== 'false',
 };

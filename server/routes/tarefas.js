@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { config } from '../config.js';
 import { atualizarCotacoes } from '../lib/cotacoes.js';
+import { concluirEntreguesVencidos } from '../lib/pedidos.js';
 import { erro, iguais, rota } from '../lib/seguranca.js';
 
 // Tarefas disparadas de fora pelo agendador do GitHub (.github/workflows/tarefas.yml),
@@ -14,6 +15,12 @@ export function rotasTarefas({ repo }) {
   r.post('/cotacoes', rota(async (_req, res) => {
     const r2 = await atualizarCotacoes(repo);
     res.status(Object.keys(r2.taxas).length ? 200 : 502).json(r2);
+  }));
+
+  // Uma vez por dia: pedidos entregues há mais de 7 dias sem confirmação viram "concluído".
+  // (As telas de pedidos também fazem isso sozinhas; a tarefa é a garantia.)
+  r.post('/pedidos', rota(async (_req, res) => {
+    res.json({ concluidos: await concluirEntreguesVencidos(repo) });
   }));
 
   return r;

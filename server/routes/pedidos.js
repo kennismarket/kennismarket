@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { Router } from 'express';
 import { documentoValido } from '../lib/documentos.js';
 import { dividirVenda, knParaCentavos, PORCENTAGEM_VENDEDOR } from '../lib/dinheiro.js';
+import { concluirEntreguesVencidos, pedidoParaTela, STATUS_DEPOIS_DE_PAGO, ultimoReembolsoPorPedido } from '../lib/pedidos.js';
 import { recebedorDaLinha } from '../lib/recebimento.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
 
@@ -136,6 +137,15 @@ export function rotasPedidos({ repo, pagamentos }) {
       await repo.atualizarPedidos({ id: pedido.id }, { status: 'cancelado' }, { status: ['aguardando_pagamento'] }).catch(() => {});
       throw e;
     }
+  }));
+
+  // "Meus pedidos": os pedidos reais pagos do cliente (com o reembolso mais recente de cada um).
+  // Antes, conclui os entregues há mais de 7 dias sem confirmação.
+  r.get('/', rota(async (req, res) => {
+    await concluirEntreguesVencidos(repo);
+    const lista = await repo.listarPedidos({ clienteId: req.usuario.id, status: STATUS_DEPOIS_DE_PAGO });
+    const rbs = ultimoReembolsoPorPedido(await repo.listarReembolsos({ pedidoIds: lista.map((p) => p.id), limite: 1000 }));
+    res.json({ pedidos: lista.map((p) => pedidoParaTela(p, { reembolso: rbs[p.id] })) });
   }));
 
   r.get('/:id', rota(async (req, res) => {
