@@ -340,12 +340,14 @@ test('minhas vendas: o vendedor vê só as vendas da própria loja', async () =>
   const quim = (await post('/api/contas/vendedor/entrar', { token: 'quimtok1', usuario: 'quim_v', senha: 'segredo123' })).sessao.access_token; // do teste do painel
   const minhas = (token) => fetch(`${base}/api/loja/vendas`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json());
   const r = await minhas(quim);
-  assert.equal(r.loja.nome, 'Loja 6800');
+  assert.deepEqual(r.lojas.map((l) => l.nome), ['Loja 6800']);
   assert.deepEqual([r.vendas, r.reembolsadas, r.totalCentavos, r.vendedorCentavos], [2, 1, 90000, 45000]);
   assert.deepEqual(r.lista.map((v) => v.id), ['q3', 'q2', 'q1']);
+  assert.deepEqual(r.lista.map((v) => v.loja), ['Loja 6800', 'Loja 6800', 'Loja 6800']);
+  assert.deepEqual([r.lojas[0].vendas, r.lojas[0].totalCentavos], [2, 90000]);
   // vendedor sem loja: zero, sem erro
   const sem = (await post('/api/contas/vendedor/entrar', { token: 'semloja1', usuario: 'sem_loja_v', senha: 'segredo123' })).sessao.access_token;
   const r2 = await minhas(sem);
-  assert.deepEqual([r2.loja, r2.vendas, r2.lista], [null, 0, []]);
+  assert.deepEqual([r2.lojas, r2.vendas, r2.lista, r2.saldoCentavos], [[], 0, [], 0]);
   assert.equal((await fetch(`${base}/api/loja/vendas`)).status, 401);
 });

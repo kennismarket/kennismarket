@@ -53,6 +53,31 @@
       cliente: 'Cliente', vendedor: 'Vendedor', dono: 'Dono', bloqueada: 'Banida', novaSenha: 'Nova senha', banir: 'Banir', desbanir: 'Desbanir',
       senhaTemp: 'Senha temporária (passe para a pessoa; ela troca em Minha conta):', senhaT: 'Gerar uma senha nova?', senhaD: 'A senha atual deixa de funcionar.', banirT: 'Banir esta conta?', banirD: 'A pessoa sai na hora e não consegue mais entrar. Dá para desfazer.' },
   };
+  // Faturamento (etapa 6): "Faturamento da conta" (Minha conta) e "Faturamento da loja" (Minha loja).
+  var TXT6 = {
+    nl: { fcT: 'Omzet van het account', fcD: 'Alle echte verkopen van je winkels bij elkaar, en wat je ontvangen hebt.', flT: 'Omzet van de winkel', flD: 'De echte verkopen van deze winkel en wat je ervan ontvangen hebt.',
+      recebido: 'Ontvangen op je Pix-sleutel', processando: 'In verwerking bij de bank', aReceber: 'Nog te ontvangen (overboeking mislukt: support lost het op)', debitos: 'Open schulden (terugbetalingen)', saldo: 'Saldo',
+      porLoja: 'Per winkel', semVendasLoja: 'Deze winkel heeft nog geen echte verkopen.', seusDebitos: 'Schulden door terugbetalingen', debitosD: 'Jouw deel van terugbetalingen die support heeft goedgekeurd. Kennismarket neemt contact op voor de betaling.',
+      repasse: 'Overboeking', rep: { repassado: 'Ontvangen', processando: 'In verwerking', aguardando: 'In verwerking', falhou: 'Mislukt' }, sit: { aberto: 'Open', quitado: 'Betaald', perdoado: 'Kwijtgescholden' },
+      quitar: 'Betaald', perdoar: 'Kwijtschelden', reabrir: 'Heropenen' },
+    en: { fcT: 'Account revenue', fcD: 'All real sales of your stores together, and what you have received.', flT: 'Store revenue', flD: 'This store’s real sales and what you have received from them.',
+      recebido: 'Received on your Pix key', processando: 'Being processed by the bank', aReceber: 'Still to receive (transfer failed: support fixes it)', debitos: 'Open debts (refunds)', saldo: 'Balance',
+      porLoja: 'By store', semVendasLoja: 'This store has no real sales yet.', seusDebitos: 'Debts from refunds', debitosD: 'Your share of refunds approved by support. Kennismarket will contact you about payment.',
+      repasse: 'Transfer', rep: { repassado: 'Received', processando: 'Processing', aguardando: 'Processing', falhou: 'Failed' }, sit: { aberto: 'Open', quitado: 'Paid', perdoado: 'Forgiven' },
+      quitar: 'Paid', perdoar: 'Forgive', reabrir: 'Reopen' },
+    es: { fcT: 'Facturación de la cuenta', fcD: 'Todas las ventas reales de tus tiendas juntas, y lo que recibiste.', flT: 'Facturación de la tienda', flD: 'Las ventas reales de esta tienda y lo que recibiste de ellas.',
+      recebido: 'Recibido en tu clave Pix', processando: 'En proceso en el banco', aReceber: 'Por recibir (falló la transferencia: soporte lo resuelve)', debitos: 'Deudas abiertas (reembolsos)', saldo: 'Saldo',
+      porLoja: 'Por tienda', semVendasLoja: 'Esta tienda aún no tiene ventas reales.', seusDebitos: 'Deudas por reembolsos', debitosD: 'Tu parte de los reembolsos aprobados por soporte. Kennismarket te contactará para el pago.',
+      repasse: 'Transferencia', rep: { repassado: 'Recibido', processando: 'En proceso', aguardando: 'En proceso', falhou: 'Falló' }, sit: { aberto: 'Abierta', quitado: 'Pagada', perdoado: 'Perdonada' },
+      quitar: 'Pagada', perdoar: 'Perdonar', reabrir: 'Reabrir' },
+    pt: { fcT: 'Faturamento da conta', fcD: 'Todas as vendas reais das suas lojas juntas, e o que você já recebeu.', flT: 'Faturamento da loja', flD: 'As vendas reais desta loja e o que você já recebeu delas.',
+      recebido: 'Recebido na sua chave Pix', processando: 'Processando no banco', aReceber: 'A receber (o repasse falhou: o suporte resolve)', debitos: 'Débitos em aberto (reembolsos)', saldo: 'Saldo',
+      porLoja: 'Por loja', semVendasLoja: 'Esta loja ainda não tem vendas reais.', seusDebitos: 'Débitos de reembolsos', debitosD: 'A sua parte dos reembolsos aprovados pelo suporte. O Kennismarket entra em contato para o acerto.',
+      repasse: 'Repasse', rep: { repassado: 'Recebido', processando: 'Processando', aguardando: 'Processando', falhou: 'Falhou' }, sit: { aberto: 'Em aberto', quitado: 'Quitado', perdoado: 'Perdoado' },
+      quitar: 'Quitado', perdoar: 'Perdoar', reabrir: 'Reabrir' },
+  };
+  function txt6(k) { var lg = (typeof S !== 'undefined' && S.lang) || 'nl'; return (TXT6[lg] || TXT6.nl)[k]; }
+  window.kmTxt6 = txt6; // o painel do dono (public/js/pedidos.js) usa os mesmos nomes de situação
   function txt2(k) {
     var lg = (typeof S !== 'undefined' && S.lang) || 'nl';
     return (TXT2[lg] || TXT2.nl)[k];
@@ -268,7 +293,16 @@
       return r;
     };
 
-    // "Minhas vendas": vendedor com conta real vê as próprias vendas no fim da página Minha conta.
+    // "Faturamento da loja": vendedor com conta real vê, em Minha loja, o faturamento da loja aberta.
+    var minhaLojaTela = window.vMyStore;
+    window.vMyStore = function () {
+      var h = minhaLojaTela.apply(this, arguments);
+      if (!(S.user && S.user.contaId && S.user.papel === 'vendedor' && S.myStore)) return h;
+      var ancora = '<div class="seg" role="group">';
+      return h.indexOf(ancora) < 0 ? h : h.replace(ancora, faturamentoLojaHTML(S.myStore.id) + ancora);
+    };
+
+    // "Faturamento da conta": vendedor com conta real vê, no fim da página Minha conta, tudo o que a conta vendeu.
     var minhaConta = window.vAccount;
     window.vAccount = function () {
       var h = minhaConta.apply(this, arguments);
@@ -393,54 +427,108 @@
     return '<div class="fxwrap" style="overflow-x:auto;margin:12px 0"><table class="fxt"><thead><tr><th>' + txt2('vPeriodo') + '</th><th style="text-align:right">' + txt2('vVendas') + '</th><th style="text-align:right">' + txt2('vTotal') + '</th></tr></thead><tbody>' +
       periodo(1) + periodo(7) + periodo(30) + '</tbody></table></div>';
   }
-  // cada venda; comParte: coluna com a parte do vendedor (em "Minhas vendas")
-  function vendasHTML(lista, comParte) {
-    var st = txt2('st'), cols = comParte ? 5 : 4;
+  // cada venda; comParte: colunas com a parte do vendedor e o repasse (faturamento); comLoja: coluna da loja
+  function vendasHTML(lista, comParte, comLoja) {
+    var st = txt2('st'), rep = txt6('rep'), cols = 4 + (comParte ? 2 : 0) + (comLoja ? 1 : 0);
     var linhas = lista.map(function (x) {
-      return '<tr><td>' + esc(dataCurta(x.data)) + '</td><td>' + esc(x.produto || '—') + '</td>' +
+      return '<tr><td>' + esc(dataCurta(x.data)) + '</td>' + (comLoja ? '<td>' + esc(x.loja || '—') + '</td>' : '') + '<td>' + esc(x.produto || '—') + '</td>' +
         '<td style="text-align:right;white-space:nowrap"><b>' + reais(x.valorCentavos) + '</b><br><small class="muted">' + coin(12) + ' ' + fmtN(x.valorKn) + '</small></td>' +
         (comParte ? '<td style="text-align:right;white-space:nowrap"><b>' + reais(x.vendedorCentavos) + '</b></td>' : '') +
-        '<td><span class="pill ' + (x.status === 'reembolsado' ? 'danger' : x.status === 'reembolso_solicitado' ? 'warn' : 'safe') + '">' + esc(st[x.status] || x.status) + '</span></td></tr>';
+        '<td><span class="pill ' + (x.status === 'reembolsado' ? 'danger' : x.status === 'reembolso_solicitado' ? 'warn' : 'safe') + '">' + esc(st[x.status] || x.status) + '</span></td>' +
+        (comParte ? '<td><span class="pill ' + (x.repasse === 'repassado' ? 'safe' : x.repasse === 'falhou' ? 'danger' : 'warn') + '">' + esc(rep[x.repasse] || '—') + '</span></td>' : '') + '</tr>';
     }).join('') || '<tr><td colspan="' + cols + '" class="muted" style="display:table-cell;text-align:center;padding:16px">' + txt2('vNenhumaVenda') + '</td></tr>';
-    return '<div class="fxwrap" style="overflow-x:auto"><table class="fxt"><thead><tr><th>' + txt2('vData') + '</th><th>' + txt2('vProduto') + '</th><th style="text-align:right">' + txt2('vValor') + '</th>' +
-      (comParte ? '<th style="text-align:right">' + txt2('mvSuaParte') + '</th>' : '') + '<th>' + txt2('vSit') + '</th></tr></thead><tbody>' + linhas + '</tbody></table></div>';
+    return '<div class="fxwrap" style="overflow-x:auto"><table class="fxt"><thead><tr><th>' + txt2('vData') + '</th>' + (comLoja ? '<th>' + txt2('vLoja') + '</th>' : '') + '<th>' + txt2('vProduto') + '</th><th style="text-align:right">' + txt2('vValor') + '</th>' +
+      (comParte ? '<th style="text-align:right">' + txt2('mvSuaParte') + '</th>' : '') + '<th>' + txt2('vSit') + '</th>' + (comParte ? '<th>' + txt6('repasse') + '</th>' : '') + '</tr></thead><tbody>' + linhas + '</tbody></table></div>';
+  }
+  // recebido, processando, a receber, débitos e saldo (faturamento e janela do vendedor no painel do dono)
+  function dinheiroHTML(d) {
+    var linha = function (rotulo, c, neg) { return '<div><span>' + rotulo + '</span><b' + (neg ? ' class="neg"' : '') + '>' + (neg ? '− ' : '') + reais(c) + '</b></div>'; };
+    return '<div class="sumbox" style="margin-top:12px">' + linha(txt6('recebido'), d.recebidoCentavos || 0) +
+      (d.processandoCentavos ? linha(txt6('processando'), d.processandoCentavos) : '') +
+      (d.aReceberCentavos ? linha(txt6('aReceber'), d.aReceberCentavos) : '') +
+      (d.debitoAbertoCentavos ? linha(txt6('debitos'), d.debitoAbertoCentavos, true) : '') +
+      '<div class="tot"><span>' + txt6('saldo') + '</span><b>' + reais(d.saldoCentavos || 0) + '</b></div></div>';
+  }
+  function debitosHTML(lista) {
+    if (!lista || !lista.length) return '';
+    var sit = txt6('sit');
+    return '<h3 style="margin:18px 0 4px">' + txt6('seusDebitos') + '</h3><p class="sub">' + txt6('debitosD') + '</p>' +
+      '<div class="fxwrap" style="overflow-x:auto"><table class="fxt"><thead><tr><th>' + txt2('vData') + '</th><th>' + txt2('vProduto') + '</th><th style="text-align:right">' + txt2('vValor') + '</th><th>' + txt2('vSit') + '</th></tr></thead><tbody>' +
+      lista.map(function (x) {
+        return '<tr><td>' + esc(dataCurta(x.data)) + '</td><td>' + esc(x.produto || '—') + '</td><td style="text-align:right;white-space:nowrap"><b>' + reais(x.valorCentavos) + '</b></td>' +
+          '<td><span class="pill ' + (x.situacao === 'aberto' ? 'warn' : 'off') + '">' + esc(sit[x.situacao] || x.situacao) + '</span></td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  // tabela "Por loja" do faturamento da conta
+  function porLojaHTML(lojas) {
+    return '<h3 style="margin:18px 0 8px">' + txt6('porLoja') + '</h3><div class="fxwrap" style="overflow-x:auto"><table class="fxt"><thead><tr><th>' + txt2('vLoja') + '</th>' +
+      '<th style="text-align:right">' + txt2('vVendas') + '</th><th style="text-align:right">' + txt2('vTotal') + '</th><th style="text-align:right">' + txt2('mvSuaParte') + '</th><th style="text-align:right">' + txt6('saldo') + '</th></tr></thead><tbody>' +
+      lojas.map(function (l) {
+        return '<tr><td><b>' + esc(l.nome) + '</b><small>' + txt2('vPct').replace('{n}', l.porcentagem) + '</small></td><td style="text-align:right"><b>' + l.vendas + '</b></td>' +
+          '<td style="text-align:right;white-space:nowrap"><b>' + reais(l.totalCentavos) + '</b></td><td style="text-align:right;white-space:nowrap">' + reais(l.vendedorCentavos) + '</td>' +
+          '<td style="text-align:right;white-space:nowrap"><b>' + reais(l.saldoCentavos) + '</b></td></tr>';
+      }).join('') + '</tbody></table></div>';
   }
   function abrirVendedor(id) {
     var v = (vend.lista || []).filter(function (x) { return x.id === id; })[0];
     if (!v) return;
     var lista = v.lista || [];
-    modal('<h2>' + esc(v.nome || v.usuario) + '</h2><p class="sub">' + (v.usuario ? '@' + esc(v.usuario) + ' · ' : '') + (v.loja ? esc(v.loja.nome) + ' · ' + txt2('vPct').replace('{n}', v.loja.porcentagem) : txt2('vSemLoja')) + '</p>' +
-      resumoHTML(v, txt2('vParte')) + periodosHTML(lista) + vendasHTML(lista, false) +
+    var lojas = v.lojas && v.lojas.length ? v.lojas : (v.loja ? [v.loja] : []);
+    modal('<h2>' + esc(v.nome || v.usuario) + '</h2><p class="sub">' + (v.usuario ? '@' + esc(v.usuario) + ' · ' : '') + (lojas.length ? lojas.map(function (l) { return esc(l.nome) + ' · ' + txt2('vPct').replace('{n}', l.porcentagem); }).join(' / ') : txt2('vSemLoja')) + '</p>' +
+      resumoHTML(v, txt2('vParte')) + dinheiroHTML(v) + periodosHTML(lista) + vendasHTML(lista, true, lojas.length > 1) +
       '<button class="btn block" data-a="close">' + txt2('vFechar') + '</button>');
   }
 
-  // ---------- "Minhas vendas" na página Minha conta (vendedor com conta real) ----------
+  // ---------- faturamento (etapa 6): da conta (Minha conta) e da loja (Minha loja) ----------
+  // Uma chamada só (GET /api/loja/vendas) traz a conta inteira e cada loja.
   var minhas = { dados: null, carregando: false, erro: '', conta: null };
-  function minhasVendasHTML() {
-    // trocou de conta (sair e entrar com outra): esquece as vendas da conta anterior
+  function carregarFaturamento() {
+    // trocou de conta (sair e entrar com outra): esquece os dados da conta anterior
     if (minhas.conta !== S.user.contaId) minhas = { dados: null, carregando: false, erro: '', conta: S.user.contaId };
     var pedido = minhas;
-    if (!minhas.dados && !minhas.erro && !minhas.carregando) {
-      minhas.carregando = true;
-      window.kmToken().then(function (t) { return fetch('/api/loja/vendas', { headers: t ? { Authorization: 'Bearer ' + t } : {} }); })
-        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then(function (r) { pedido.dados = r; }, function () { pedido.erro = txt('falha'); })
-        .then(function () { pedido.carregando = false; if (pedido === minhas && S.view === 'conta') { var y = scrollY; render(); scrollTo(0, y); } });
+    // busca de novo quando os números têm mais de 20 segundos (mostrando os antigos enquanto isso)
+    if (minhas.carregando || minhas.erro || (minhas.dados && Date.now() - minhas.ultimo < 20000)) return;
+    minhas.carregando = true;
+    window.kmToken().then(function (t) { return fetch('/api/loja/vendas', { headers: t ? { Authorization: 'Bearer ' + t } : {} }); })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (r) { pedido.dados = r; pedido.ultimo = Date.now(); }, function () { pedido.erro = txt('falha'); })
+      .then(function () { pedido.carregando = false; if (pedido === minhas && (S.view === 'conta' || S.view === 'minhaloja')) { var y = scrollY; render(); scrollTo(0, y); } });
+  }
+  function painelFaturamento(id, titulo, desc, corpo) {
+    return '<section class="panel" id="' + id + '" style="margin-bottom:' + (id === 'km-minhas-vendas' ? '40px' : '18px') + '"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">' +
+      '<h2 style="margin:0">' + titulo + '</h2><button class="btn sm" data-km-fat-atualizar>' + txt2('vAtualizar') + '</button></div>' +
+      '<p class="sub">' + desc + '</p>' + corpo + '</section>';
+  }
+  function estadoFaturamento() {
+    carregarFaturamento();
+    if (minhas.erro) return '<p class="err">' + esc(minhas.erro) + '</p>';
+    if (!minhas.dados) return '<p class="muted">' + txt2('vCarregando') + '</p>';
+    return null;
+  }
+  // Minha conta: tudo o que a conta vendeu, somando todas as lojas dela
+  function minhasVendasHTML() {
+    var corpo = estadoFaturamento();
+    if (corpo == null) {
+      var d = minhas.dados, lojas = d.lojas || [];
+      corpo = !lojas.length ? '<p class="muted">' + txt2('mvSemLoja') + '</p>'
+        : resumoHTML(d, txt2('mvSuaParte')) + dinheiroHTML(d) + periodosHTML(d.lista || []) + porLojaHTML(lojas) +
+          debitosHTML(d.debitos) + '<div style="margin-top:18px">' + vendasHTML(d.lista || [], true, lojas.length > 1) + '</div>';
     }
-    var corpo;
-    if (minhas.erro) corpo = '<p class="err">' + esc(minhas.erro) + '</p>';
-    else if (!minhas.dados) corpo = '<p class="muted">' + txt2('vCarregando') + '</p>';
-    else {
-      var d = minhas.dados;
-      corpo = (d.loja ? '<p class="sub">' + esc(d.loja.nome) + ' · ' + txt2('vPct').replace('{n}', d.loja.porcentagem) + '</p>' : '<p class="muted">' + txt2('mvSemLoja') + '</p>') +
-        resumoHTML(d, txt2('mvSuaParte')) + periodosHTML(d.lista || []) + vendasHTML(d.lista || [], true);
+    return painelFaturamento('km-minhas-vendas', txt6('fcT'), txt6('fcD'), corpo);
+  }
+  // Minha loja: só a loja aberta na tela
+  function faturamentoLojaHTML(lojaId) {
+    var corpo = estadoFaturamento();
+    if (corpo == null) {
+      var l = (minhas.dados.lojas || []).filter(function (x) { return x.prototipoId === lojaId; })[0];
+      corpo = !l ? '<p class="muted">' + txt6('semVendasLoja') + '</p>'
+        : '<p class="sub">' + esc(l.nome) + ' · ' + txt2('vPct').replace('{n}', l.porcentagem) + '</p>' + resumoHTML(l, txt2('mvSuaParte')) + dinheiroHTML(l) +
+          periodosHTML(l.lista || []) + debitosHTML(l.debitos) + '<div style="margin-top:18px">' + vendasHTML(l.lista || [], true, false) + '</div>';
     }
-    return '<section class="panel" id="km-minhas-vendas" style="margin-bottom:40px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">' +
-      '<h2 style="margin:0">' + txt2('mvT') + '</h2><button class="btn sm" id="km-mv-atualizar">' + txt2('vAtualizar') + '</button></div>' +
-      '<p class="sub">' + txt2('mvD') + '</p>' + corpo + '</section>';
+    return painelFaturamento('km-fat-loja', txt6('flT'), txt6('flD'), corpo);
   }
   document.addEventListener('click', function (e) {
-    if (e.target && e.target.closest && e.target.closest('#km-mv-atualizar')) {
+    if (e.target && e.target.closest && e.target.closest('[data-km-fat-atualizar]')) {
       e.preventDefault(); minhas.dados = null; minhas.erro = ''; var y = scrollY; render(); scrollTo(0, y);
     }
   });

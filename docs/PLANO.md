@@ -33,7 +33,7 @@
 | 3 | Tela de checkout no site (o servidor de pagamento já está pronto, com o simulado) | feito com o pagamento simulado (um produto por vez; vendedor cadastra o Pix). Falta: provedor real da Transfeera (etapa 0d), comprar vários produtos/tradução e pagar a proposta do chat (com a etapa 5) |
 | 4 | Telas de pedidos, entrega e reembolso + painel do suporte | feito (03/11/2026) com o pagamento simulado. Falta: testar com a Transfeera (etapa 0d) e o chat real (etapa 5) |
 | 5 | Chat cliente ↔ vendedor | |
-| 6 | Painel do vendedor com o valor a receber | |
+| 6 | Painel do vendedor com o valor a receber | feito (04/11/2026): Faturamento da conta (Minha conta, soma todas as lojas) e Faturamento da loja (Minha loja); débitos quitados/perdoados pelo dono. Falta: testar o repasse com a Transfeera |
 | 7 | Links de convite (só donos) | |
 | — | Revisão de segurança por um dev antes de ligar dinheiro real | obrigatório |
 
@@ -66,7 +66,7 @@ Pago  →  Entregue  →  Concluído (o cliente confirma, ou sozinho 7 dias depo
 - Testar o caminho completo com a Transfeera de verdade (sandbox), quando chegar a documentação (etapa 0d).
 - Etapa 5 (chat real): a conversa e a proposta paga pelo chat. Hoje, "Pedir ajuste" e as mensagens nos pedidos
   reais ficam só no navegador, e o "vendedor" ainda responde com as falas prontas do protótipo.
-- Marcar um débito como quitado/perdoado no painel (hoje só a lista).
+- ~~Marcar um débito como quitado/perdoado no painel~~ (feito na etapa 6).
 - Carteira como histórico (os reembolsos ainda não aparecem lá).
 
 ## O que falta no projeto (lista completa, atualizada em 03/11/2026)
@@ -82,7 +82,10 @@ Pago  →  Entregue  →  Concluído (o cliente confirma, ou sozinho 7 dias depo
 **Próximas etapas**
 - **4**: feita (seção acima); falta testar com a Transfeera e marcar débitos como quitados.
 - **5**: chat real cliente ↔ vendedor (hoje as respostas do vendedor são simuladas).
-- **6**: painel do vendedor com o valor a receber ("Minhas vendas", em Minha conta, já adianta uma parte).
+- **6**: feita (Faturamento da conta e da loja). Falta testar o repasse com a Transfeera.
+- **Várias lojas por conta** (pedido dos donos em 04/11/2026): os painéis de faturamento já somam todas as lojas, mas
+  o site ainda só permite uma loja por conta. Liberar exige: migração tirando o "único" de `lojas.vendedor_id`, as
+  regras de quem grava cada loja (etapa 2), o painel "Como você recebe" por loja e um seletor de loja em "Minha loja".
 - **7**: convites enviados por e-mail (precisa do Resend).
 - **Login**: recuperar senha do cliente por e-mail e confirmação de e-mail (precisam do Resend).
 - **Textos**: Carteira como histórico (sem saldo) e os textos de garantia e reembolso do protótipo que ainda

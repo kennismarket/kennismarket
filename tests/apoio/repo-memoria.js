@@ -56,13 +56,14 @@ export function criarRepoMemoria() {
       return Object.values(t.contas).filter((c) => c.papel === 'vendedor')
         .map((c) => ({ id: c.id, nome: c.nome, usuario: c.usuario, email: c.email, banida: Boolean(c.banida), criadaEm: null }));
     },
+    async lojasDoVendedor(vendedorId) { return Object.values(t.lojas).filter((l) => l.vendedor_id === vendedorId).map(copia); },
     async lojasComVendedor() { return Object.values(t.lojas).filter((l) => l.vendedor_id).map(copia); },
     async vendasDasLojas(lojaIds) {
       return Object.values(t.pedidos)
         .filter((p) => lojaIds.includes(p.loja_id) && ['pago', 'entregue', 'concluido', 'reembolso_solicitado', 'reembolsado'].includes(p.status))
         .sort((a, b) => String(b.criado_em || '').localeCompare(String(a.criado_em || '')))
         .map((p) => ({ id: p.id, loja_id: p.loja_id, valor_kn: p.valor_kn, valor_centavos: p.valor_centavos, vendedor_centavos: p.vendedor_centavos,
-          status: p.status, criado_em: p.criado_em || null, pago_em: p.pago_em || null, produto_titulo: t.produtos[p.produto_id]?.titulo || '' }));
+          status: p.status, repasse_status: p.repasse_status || null, criado_em: p.criado_em || null, pago_em: p.pago_em || null, produto_titulo: t.produtos[p.produto_id]?.titulo || '' }));
     },
     async banirConta(id, banir) {
       t.contas[id].banida = banir;
@@ -199,9 +200,12 @@ export function criarRepoMemoria() {
       t.debitos[d.id] = d;
       return copia(d);
     },
-    async listarDebitos({ situacao, pedidoId } = {}) {
-      return Object.values(t.debitos).filter((d) => (!situacao || d.situacao === situacao) && (!pedidoId || d.pedido_id === pedidoId)).map(copia);
+    async listarDebitos({ situacao, pedidoId, lojaIds } = {}) {
+      return Object.values(t.debitos).filter((d) => (!situacao || d.situacao === situacao) && (!pedidoId || d.pedido_id === pedidoId) && (!lojaIds || lojaIds.includes(d.loja_id)))
+        .sort((a, b) => String(b.criado_em || '').localeCompare(String(a.criado_em || ''))).map(copia);
     },
+    async debito(id) { return copia(t.debitos[id]); },
+    async atualizarDebito(id, campos) { if (!t.debitos[id]) return null; Object.assign(t.debitos[id], campos); return copia(t.debitos[id]); },
     async listarDocsPrototipo(colecao) {
       return Object.entries(t.docs[colecao] || {}).map(([id, dados]) => ({ id, dados: structuredClone(dados) }));
     },

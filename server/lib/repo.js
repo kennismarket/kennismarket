@@ -125,6 +125,10 @@ export const repo = {
       return { ...p, email: u.email || '', banida: Boolean(u.banned_until && Date.parse(u.banned_until) > Date.now()), criadaEm: u.created_at || null };
     });
   },
+  // Todas as lojas de uma conta (o faturamento soma todas).
+  async lojasDoVendedor(vendedorId) {
+    return checar(await db().from('lojas').select('*').eq('vendedor_id', vendedorId).order('criada_em', { ascending: true }));
+  },
   async lojasComVendedor() {
     return checar(await db().from('lojas').select('id, nome, prototipo_id, porcentagem_vendedor, vendedor_id, publicada, banida').not('vendedor_id', 'is', null));
   },
@@ -132,7 +136,7 @@ export const repo = {
   async vendasDasLojas(lojaIds) {
     if (!lojaIds.length) return [];
     const linhas = checar(await db().from('pedidos')
-      .select('id, loja_id, valor_kn, valor_centavos, vendedor_centavos, status, criado_em, pago_em, produto:produtos(titulo)')
+      .select('id, loja_id, valor_kn, valor_centavos, vendedor_centavos, status, repasse_status, criado_em, pago_em, produto:produtos(titulo)')
       .in('loja_id', lojaIds).in('status', [...STATUS_PAGOS, 'reembolsado']).order('criado_em', { ascending: false }).limit(5000));
     return linhas.map(({ produto, ...v }) => ({ ...v, produto_titulo: produto?.titulo || '' }));
   },
@@ -293,11 +297,18 @@ export const repo = {
   async criarDebito(campos) {
     return checar(await db().from('debitos_vendedor').insert(campos).select().single());
   },
-  async listarDebitos({ situacao, pedidoId } = {}) {
-    let q = db().from('debitos_vendedor').select('*').order('criado_em', { ascending: false }).limit(200);
+  async listarDebitos({ situacao, pedidoId, lojaIds } = {}) {
+    let q = db().from('debitos_vendedor').select('*').order('criado_em', { ascending: false }).limit(1000);
     if (situacao) q = q.eq('situacao', situacao);
     if (pedidoId) q = q.eq('pedido_id', pedidoId);
+    if (lojaIds) { if (!lojaIds.length) return []; q = q.in('loja_id', lojaIds); }
     return checar(await q);
+  },
+  async debito(id) {
+    return checar(await db().from('debitos_vendedor').select('*').eq('id', id).maybeSingle());
+  },
+  async atualizarDebito(id, campos) {
+    return checar(await db().from('debitos_vendedor').update(campos).eq('id', id).select().maybeSingle());
   },
 
   // ---------- protótipo (versão de testes): documentos e arquivos, como no claude.ai ----------
