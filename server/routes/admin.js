@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { debitoDoVendedor } from '../lib/dinheiro.js';
 import { DIAS_CONFIRMACAO_AUTOMATICA } from '../lib/pedidos.js';
 import { espelharLoja, espelharTodas } from '../lib/espelho-lojas.js';
-import { resumoVendas } from '../lib/vendas.js';
+import { resumoFaturamento } from '../lib/vendas.js';
 import { donasDasLojas, idDaLoja } from '../lib/lojas-prototipo.js';
 import { erro, exigirDono, exigirUsuario, rota } from '../lib/seguranca.js';
 
@@ -25,18 +25,23 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
   // na lista com a situação, mas não entram no número nem no total.
   r.get('/vendedores', rota(async (req, res) => {
     const [vendedores, lojas] = await Promise.all([repo.listarVendedores(), repo.lojasComVendedor()]);
-    const lojaDe = Object.fromEntries(lojas.map((l) => [l.vendedor_id, l]));
-    const vendas = await repo.vendasDasLojas(lojas.map((l) => l.id));
-    const porLoja = {};
-    for (const v of vendas) (porLoja[v.loja_id] ||= []).push(v);
+    const lojasDe = {};
+    for (const l of lojas) (lojasDe[l.vendedor_id] ||= []).push(l);
+    const ids = lojas.map((l) => l.id);
+    const [vendas, debitos] = await Promise.all([repo.vendasDasLojas(ids), repo.listarDebitos({ lojaIds: ids })]);
+    const nomeDaLoja = Object.fromEntries(lojas.map((l) => [l.id, l.nome]));
+    const produtoDe = (pedidoId) => vendas.find((v) => v.id === pedidoId)?.produto_titulo || '';
     const comVendas = req.query.vendas === '1';
+    const daLoja = (l) => ({ nome: l.nome, prototipoId: l.prototipo_id, porcentagem: l.porcentagem_vendedor, publicada: l.publicada, banida: l.banida });
     const lista = vendedores.map((p) => {
-      const loja = lojaDe[p.id] || null;
-      const todas = loja ? porLoja[loja.id] || [] : [];
+      const suas = lojasDe[p.id] || [];
+      const sIds = suas.map((l) => l.id);
       return {
         id: p.id, nome: p.nome, usuario: p.usuario, email: p.email.endsWith('.invalid') ? '' : p.email, banida: p.banida,
-        loja: loja && { nome: loja.nome, prototipoId: loja.prototipo_id, porcentagem: loja.porcentagem_vendedor, publicada: loja.publicada, banida: loja.banida },
-        ...resumoVendas(todas, { comLista: comVendas }),
+        loja: suas[0] ? daLoja(suas[0]) : null,
+        lojas: suas.map(daLoja),
+        ...resumoFaturamento(vendas.filter((v) => sIds.includes(v.loja_id)).map((v) => ({ ...v, loja_nome: nomeDaLoja[v.loja_id] || '' })),
+          debitos.filter((d) => sIds.includes(d.loja_id)), { comLista: comVendas, produtoDe }),
       };
     }).sort((a, b) => b.totalCentavos - a.totalCentavos || String(a.nome).localeCompare(String(b.nome)));
     res.json({ vendedores: lista });
@@ -172,7 +177,7 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
     res.json({
       abertos: abertos.map(caso),
       decididos: decididos.map(caso),
-      debitos: debitos.map((d) => ({ id: d.id, valorCentavos: d.valor_centavos, situacao: d.situacao, criadoEm: d.criado_em || null, pedido: pedidoDe(d.pedido_id) })),
+      debitos: debitos.map((d) => ({ id: d.id, valorCentavos: d.valor_centavos, situacao: d.situacao, criadoEm: d.criado_em || null, resolvidoEm: d.resolvido_em || null, observacao: d.observacao || null, pedido: pedidoDe(d.pedido_id) })),
       diasConfirmacao: DIAS_CONFIRMACAO_AUTOMATICA,
     });
   }));
@@ -180,6 +185,16 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
   // Débitos de vendedores (anotados nos reembolsos). ?situacao=aberto para só os em aberto.
   r.get('/debitos', rota(async (req, res) => {
     res.json(await repo.listarDebitos({ situacao: req.query.situacao || undefined }));
+  }));
+
+  // Marca um débito de vendedor como quitado (pagou por fora), perdoado, ou de volta em aberto.
+  r.post('/debitos/:id', rota(async (req, res) => {
+    const { situacao, observacao } = req.body || {};
+    if (!['aberto', 'quitado', 'perdoado'].includes(situacao)) throw erro(400, 'situacao: aberto, quitado ou perdoado');
+    if (!(await repo.debito(req.params.id))) throw erro(404, 'débito não encontrado');
+    const campos = { situacao, resolvido_em: situacao === 'aberto' ? null : new Date().toISOString() };
+    if (observacao !== undefined) campos.observacao = String(observacao || '').trim().slice(0, 500) || null;
+    res.json(await repo.atualizarDebito(req.params.id, campos));
   }));
 
   // Pergunta ao banco a situação da cobrança e do split, e corrige o pedido se algum aviso se perdeu.

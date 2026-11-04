@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { concluirEntreguesVencidos, pedidoParaTela, STATUS_DEPOIS_DE_PAGO, ultimoReembolsoPorPedido } from '../lib/pedidos.js';
 import { linhaDoRecebedor, recebedorDoCadastro, recebedorDaLinha } from '../lib/recebimento.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
-import { resumoVendas } from '../lib/vendas.js';
+import { resumoFaturamento } from '../lib/vendas.js';
 
 // Área do vendedor sobre a própria loja.
 export function rotasLoja({ repo, pagamentos }) {
@@ -27,11 +27,22 @@ export function rotasLoja({ repo, pagamentos }) {
     res.json({ situacao: linha.situacao, recebedor: recebedorDaLinha(linha) });
   }));
 
-  // "Minhas vendas" (página Minha conta do vendedor): as vendas reais da própria loja.
+  // Faturamento (etapa 6): o da conta inteira (soma de todas as lojas da conta, em "Minha conta")
+  // e o de cada loja (em "Minha loja"). Vendas, parte do vendedor, repasse (recebido, processando,
+  // a receber), débitos dos reembolsos e saldo.
   r.get('/vendas', rota(async (req, res) => {
-    const loja = await repo.lojaDoVendedor(req.usuario.id);
-    if (!loja) return res.json({ loja: null, ...resumoVendas([]) });
-    res.json({ loja: { nome: loja.nome, porcentagem: loja.porcentagem_vendedor }, ...resumoVendas(await repo.vendasDasLojas([loja.id])) });
+    const lojas = await repo.lojasDoVendedor(req.usuario.id);
+    const ids = lojas.map((l) => l.id);
+    const [vendas, debitos] = await Promise.all([repo.vendasDasLojas(ids), repo.listarDebitos({ lojaIds: ids })]);
+    const nomeDaLoja = Object.fromEntries(lojas.map((l) => [l.id, l.nome]));
+    const produtoDe = (pedidoId) => vendas.find((v) => v.id === pedidoId)?.produto_titulo || '';
+    res.json({
+      ...resumoFaturamento(vendas.map((v) => ({ ...v, loja_nome: nomeDaLoja[v.loja_id] || '' })), debitos, { produtoDe }),
+      lojas: lojas.map((l) => ({
+        nome: l.nome, prototipoId: l.prototipo_id, porcentagem: l.porcentagem_vendedor, publicada: l.publicada, banida: l.banida,
+        ...resumoFaturamento(vendas.filter((v) => v.loja_id === l.id), debitos.filter((d) => d.loja_id === l.id), { produtoDe }),
+      })),
+    });
   }));
 
   // "Minha loja → Pedidos": os pedidos reais pagos da própria loja, com o primeiro nome do cliente.

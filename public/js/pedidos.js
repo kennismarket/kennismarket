@@ -335,8 +335,13 @@
         '<div style="margin-top:18px"><h3 style="margin:0 0 4px">' + t('debitosT') + '</h3><p class="sub">' + t('debitosD') + '</p>' +
         (d.debitos.length ? d.debitos.map(function (x) {
           var p = x.pedido || { loja: {} };
-          return '<div class="case"><div><b>' + esc(p.loja.nome || '') + '</b><span class="muted">' + tr('caseOrder', { id: idCurto(p.id || x.id), s: esc(p.produto || '') }) + '</span></div>' +
-            '<div class="case-r"><b class="cv neg">' + reais(x.valorCentavos) + '</b><span class="pill ' + (x.situacao === 'aberto' ? 'warn' : 'off') + '">' + esc(t('sit')[x.situacao] || x.situacao) + '</span></div></div>';
+          var t6 = window.kmTxt6 || function () { return ''; };
+          var acoes = x.situacao === 'aberto'
+            ? '<div class="acts"><button class="btn sm" data-a="kmdebito" data-id="' + esc(x.id) + '" data-s="perdoado">' + t6('perdoar') + '</button>' +
+              '<button class="btn sm safe" data-a="kmdebito" data-id="' + esc(x.id) + '" data-s="quitado">' + t6('quitar') + '</button></div>'
+            : '<button class="link" data-a="kmdebito" data-id="' + esc(x.id) + '" data-s="aberto">' + t6('reabrir') + '</button>';
+          return '<div class="case"><div><b>' + esc(p.loja.nome || '') + '</b><span class="muted">' + tr('caseOrder', { id: idCurto(p.id || x.id), s: esc(p.produto || '') }) + (x.observacao ? ' · “' + esc(x.observacao) + '”' : '') + '</span></div>' +
+            '<div class="case-r"><b class="cv neg">' + reais(x.valorCentavos) + '</b><span class="pill ' + (x.situacao === 'aberto' ? 'warn' : 'off') + '">' + esc(t('sit')[x.situacao] || x.situacao) + '</span>' + acoes + '</div></div>';
         }).join('') : '<p class="muted">' + t('semDebitos') + '</p>') + '</div>';
     }
     return '<div id="km-casos" style="margin:6px 0 18px"><span class="label">' + t('reaisT') + '</span>' + corpo + '</div>';
@@ -475,6 +480,11 @@
         return h.slice(0, fim) + casosReaisHTML() + resto;
       };
     }
+    // Dono: débito do vendedor pago por fora (quitado), perdoado, ou de volta em aberto.
+    A.kmdebito = function (el) {
+      el.disabled = true;
+      api('POST', '/api/admin/debitos/' + el.dataset.id, { situacao: el.dataset.s }).then(function () { carregarCasos(true); }, function () { el.disabled = false; toast(t('falha')); });
+    };
     A.kmcasosim = function (el) { var c = casoPorId(el.dataset.id); if (c) abrirDevolucao(c); };
     A.kmcasono = function (el) {
       var c = casoPorId(el.dataset.id);
