@@ -171,8 +171,9 @@ export const repo = {
   async loja(id) {
     return checar(await db().from('lojas').select('*').eq('id', id).maybeSingle());
   },
+  // A primeira loja do vendedor (a conta pode ter até 10; ver lojasDoVendedor).
   async lojaDoVendedor(vendedorId) {
-    return checar(await db().from('lojas').select('*').eq('vendedor_id', vendedorId).maybeSingle());
+    return checar(await db().from('lojas').select('*').eq('vendedor_id', vendedorId).order('criada_em', { ascending: true }).limit(1).maybeSingle());
   },
   // ---------- cópia das lojas do protótipo nas tabelas reais (server/lib/espelho-lojas.js) ----------
   async lojaPorPrototipo(prototipoId) {
@@ -183,11 +184,6 @@ export const repo = {
   },
   // Cria ou atualiza a loja e os produtos dela; produtos que sumiram ficam inativos.
   async salvarLojaEspelho(loja, produtos) {
-    if (loja.vendedor_id) {
-      // o vendedor só tem uma loja: uma cópia antiga com outro id deixa de ser dele
-      checar(await db().from('lojas').update({ vendedor_id: null, publicada: false })
-        .eq('vendedor_id', loja.vendedor_id).neq('prototipo_id', loja.prototipo_id));
-    }
     const l = checar(await db().from('lojas').upsert({ ...loja, slug: `loja-p${loja.prototipo_id}` }, { onConflict: 'prototipo_id' }).select().single());
     if (produtos.length) {
       checar(await db().from('produtos').upsert(produtos.map((p) => ({ ...p, loja_id: l.id, ativo: true })), { onConflict: 'loja_id,prototipo_id' }));
@@ -368,7 +364,7 @@ export const repo = {
     }
     const loja = checar(await db().from('lojas').upsert({
       vendedor_id: ids.vendedor, nome: 'Loja de Teste', slug: 'loja-de-teste', descricao: 'Loja inventada para testar pagamentos.', publicada: true, banida: false,
-    }, { onConflict: 'vendedor_id' }).select().single());
+    }, { onConflict: 'slug' }).select().single());
     let produto = checar(await db().from('produtos').select('*').eq('loja_id', loja.id).eq('titulo', 'Mentoria de teste').maybeSingle());
     if (!produto) {
       produto = checar(await db().from('produtos').insert({

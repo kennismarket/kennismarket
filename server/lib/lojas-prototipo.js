@@ -10,6 +10,14 @@
 export const CAMPOS_DO_DONO = ['split', 'ver', 'rating', 'reviews', 'sales'];
 export const SPLIT_MIN = 10;
 export const SPLIT_MAX = 90;
+// Várias lojas por conta (decisão dos donos, 04/11/2026): até 10 por conta de vendedor.
+export const MAX_LOJAS_POR_CONTA = 10;
+
+// Ids das lojas (do protótipo) de uma conta, na ordem em que foram criadas (id menor primeiro).
+export async function lojasDaConta(repo, contaId) {
+  const donas = await donasDasLojas(repo);
+  return Object.keys(donas).filter((id) => donas[id] === contaId).map(Number).sort((a, b) => a - b);
+}
 
 export const idDaLoja = (docId) => (/^s\d{1,12}$/.test(docId) ? Number(docId.slice(1)) : null);
 
