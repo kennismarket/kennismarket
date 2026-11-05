@@ -14,6 +14,7 @@ import { rotaWebhookPagamento } from './routes/webhook-pagamento.js';
 import { rotasTarefas } from './routes/tarefas.js';
 import { rotasTeste } from './routes/teste.js';
 import { rotasPrototipo } from './routes/prototipo.js';
+import { rotasChat } from './routes/chat.js';
 import { montarPaginaPrototipo } from './lib/pagina-prototipo.js';
 
 const pastaPublica = fileURLToPath(new URL('../public', import.meta.url));
@@ -44,6 +45,7 @@ export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), pa
   app.use('/api/rates', rotaRatesPrototipo(deps)); // formato que o protótipo espera (RATES_URL)
   app.use('/api/pedidos', rotasPedidos(deps));
   app.use('/api/loja', rotasLoja(deps));
+  app.use('/api/chat', rotasChat({ ...deps, limites }));
   app.use('/api/contas', rotasContas({ ...deps, mudouPrototipo: prototipo.mudou, limites }));
   app.use('/api/admin', rotasAdmin({ ...deps, mudouPrototipo: prototipo.mudou }));
   app.use('/api/tarefas', rotasTarefas(deps));

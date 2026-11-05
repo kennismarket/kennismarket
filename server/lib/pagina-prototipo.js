@@ -11,13 +11,14 @@
 //    que já passaram para o Supabase;
 // 6. pedidos reais depois do pagamento (public/js/pedidos.js): Meus pedidos, Minha loja → Pedidos
 //    e os chamados de suporte do painel do dono (etapa 4);
-// 7. várias lojas por conta (public/js/lojas.js): "Suas lojas" e "Criar outra loja" em Minha loja.
+// 7. várias lojas por conta (public/js/lojas.js): "Suas lojas" e "Criar outra loja" em Minha loja;
+// 8. chat real entre cliente e vendedor (public/js/chat.js), etapa 5.
 import { readFileSync } from 'node:fs';
 
 const ARQUIVO = new URL('../../kennismarket-prototipo.html', import.meta.url);
 
 export const AJUSTES = [
-  { nome: 'ponte', de: /<head>/, para: '<head><script src="/js/ponte-claude.js"></script><script src="/js/contas.js"></script><script src="/js/checkout.js"></script><script src="/js/pedidos.js"></script><script src="/js/lojas.js"></script>' },
+  { nome: 'ponte', de: /<head>/, para: '<head><script src="/js/ponte-claude.js"></script><script src="/js/contas.js"></script><script src="/js/checkout.js"></script><script src="/js/pedidos.js"></script><script src="/js/lojas.js"></script><script src="/js/chat.js"></script>' },
   { nome: 'ícone da aba', de: /<head>/, para: '<head><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">' },
   { nome: 'links de convite', de: /const SITE_URL="[^"]*";/, para: 'const SITE_URL=location.origin+"/";' },
   { nome: 'cotações', de: /var RATES_URL="[^"]*";/, para: 'var RATES_URL="/api/rates";' },

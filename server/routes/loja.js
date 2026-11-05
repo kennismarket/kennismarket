@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { concluirEntreguesVencidos, pedidoParaTela, STATUS_DEPOIS_DE_PAGO, ultimoReembolsoPorPedido } from '../lib/pedidos.js';
+import { arquivosPorPedido, concluirEntreguesVencidos, pedidoParaTela, STATUS_DEPOIS_DE_PAGO, ultimoReembolsoPorPedido } from '../lib/pedidos.js';
 import { linhaDoRecebedor, recebedorDoCadastro, recebedorDaLinha } from '../lib/recebimento.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
 import { resumoFaturamento } from '../lib/vendas.js';
@@ -71,9 +71,10 @@ export function rotasLoja({ repo, pagamentos }) {
     await concluirEntreguesVencidos(repo);
     const lista = await repo.listarPedidos({ lojaId: loja.id, status: STATUS_DEPOIS_DE_PAGO });
     const rbs = ultimoReembolsoPorPedido(await repo.listarReembolsos({ pedidoIds: lista.map((p) => p.id), limite: 1000 }));
+    const arquivos = arquivosPorPedido(await repo.arquivosDasEntregas(lista.map((p) => p.id)));
     res.json({
       loja: { nome: loja.nome, prototipoId: loja.prototipo_id, porcentagem: loja.porcentagem_vendedor },
-      pedidos: lista.map((p) => pedidoParaTela(p, { comCliente: true, reembolso: rbs[p.id] })),
+      pedidos: lista.map((p) => pedidoParaTela(p, { comCliente: true, reembolso: rbs[p.id], arquivos: arquivos[p.id] })),
     });
   }));
 

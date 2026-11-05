@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { Router } from 'express';
 import { debitoDoVendedor } from '../lib/dinheiro.js';
 import { DIAS_CONFIRMACAO_AUTOMATICA } from '../lib/pedidos.js';
+import { avisarPagamento, conversaParaTela, mensagemParaTela } from '../lib/chat.js';
 import { espelharLoja, espelharTodas } from '../lib/espelho-lojas.js';
 import { resumoFaturamento } from '../lib/vendas.js';
 import { donasDasLojas, idDaLoja } from '../lib/lojas-prototipo.js';
@@ -172,7 +173,13 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
         produto: p.produto_titulo, cliente: p.cliente_nome, pagoEm: p.pago_em || null, entregueEm: p.entregue_em || null,
       } : null;
     };
-    const caso = (rb) => ({ id: rb.id, status: rb.status, motivo: rb.motivo, statusAnterior: rb.status_anterior, criadoEm: rb.criado_em || null,
+    // a conversa do cliente com a loja (o suporte lê nos chamados)
+    const conversaDoPedido = {};
+    await Promise.all(ids.map(async (id) => {
+      const p = pedidos[id];
+      if (p) conversaDoPedido[id] = (await repo.conversaPor(p.loja_id, p.cliente_id))?.id || null;
+    }));
+    const caso = (rb) => ({ id: rb.id, conversaId: conversaDoPedido[rb.pedido_id] || null, status: rb.status, motivo: rb.motivo, statusAnterior: rb.status_anterior, criadoEm: rb.criado_em || null,
       decididoEm: rb.decidido_em || null, valorCentavos: rb.valor_centavos ?? null, pedido: pedidoDe(rb.pedido_id) });
     res.json({
       abertos: abertos.map(caso),
@@ -180,6 +187,35 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
       debitos: debitos.map((d) => ({ id: d.id, valorCentavos: d.valor_centavos, situacao: d.situacao, criadoEm: d.criado_em || null, resolvidoEm: d.resolvido_em || null, observacao: d.observacao || null, pedido: pedidoDe(d.pedido_id) })),
       diasConfirmacao: DIAS_CONFIRMACAO_AUTOMATICA,
     });
+  }));
+
+  // ---------- conversas (etapa 5) ----------
+  // Decisão dos donos: o suporte lê uma conversa só quando ela foi marcada (contato por fora ou
+  // golpe) ou quando há pedido de reembolso daquele cliente naquela loja.
+  async function podeLer(c) {
+    if (c.marcada_em) return true;
+    const pedidos = await repo.listarPedidos({ clienteId: c.cliente_id, lojaId: c.loja_id });
+    return (await repo.listarReembolsos({ pedidoIds: pedidos.map((p) => p.id), limite: 1 })).length > 0;
+  }
+  r.get('/conversas', rota(async (_req, res) => {
+    const lista = await repo.listarConversas({ marcadas: true });
+    res.json({ conversas: lista.map((c) => ({ ...conversaParaTela(c, 'vendedor'), cliente: c.cliente_nome, nova: false })) });
+  }));
+  r.get('/conversas/:id/mensagens', rota(async (req, res) => {
+    const c = await repo.conversa(req.params.id);
+    if (!c) throw erro(404, 'conversa não encontrada');
+    if (!(await podeLer(c))) throw erro(403, 'o suporte só lê conversas marcadas ou com pedido de reembolso');
+    const [info] = (await repo.listarConversas({ lojaIds: [c.loja_id] })).filter((x) => x.id === c.id);
+    res.json({ conversa: { ...conversaParaTela(info || c, 'vendedor'), cliente: info?.cliente_nome || '' },
+      mensagens: (await repo.mensagensDaConversa(c.id, { limite: 500 })).map(mensagemParaTela) });
+  }));
+  // Tira (ou põe de volta) a marcação de uma conversa.
+  r.post('/conversas/:id/marcar', rota(async (req, res) => {
+    if (typeof req.body?.marcada !== 'boolean') throw erro(400, 'informe marcada: true ou false');
+    if (!(await repo.conversa(req.params.id))) throw erro(404, 'conversa não encontrada');
+    const c = await repo.atualizarConversa(req.params.id, req.body.marcada
+      ? { marcada_em: new Date().toISOString(), marcada_motivo: 'suporte' } : { marcada_em: null, marcada_motivo: null });
+    res.json({ marcada: Boolean(c.marcada_em) });
   }));
 
   // Débitos de vendedores (anotados nos reembolsos). ?situacao=aberto para só os em aberto.
@@ -206,7 +242,9 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
     const s = await pagamentos.consultarStatus({ cobrancaId: p.cobranca_id });
     const onde = { id: p.id };
     const agora = new Date().toISOString();
-    if (s.pagamento === 'pago') await repo.atualizarPedidos(onde, { status: 'pago', pago_em: agora }, { status: ['aguardando_pagamento'] });
+    if (s.pagamento === 'pago') {
+      for (const p2 of await repo.atualizarPedidos(onde, { status: 'pago', pago_em: agora }, { status: ['aguardando_pagamento'] })) await avisarPagamento(repo, p2);
+    }
     if (s.pagamento === 'cancelado') await repo.atualizarPedidos(onde, { status: 'cancelado' }, { status: ['aguardando_pagamento'] });
     if (s.pagamento === 'devolvido') {
       await repo.atualizarPedidos(onde, { status: 'reembolsado' }, { status: ['pago', 'entregue', 'concluido', 'reembolso_solicitado', 'contestado'] });

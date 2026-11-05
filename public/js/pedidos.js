@@ -168,9 +168,9 @@
       if (pi < 0) return false;
       var quando = Date.parse(p.pagoEm || p.criadoEm) || Date.now();
       o = { id: idCurto(p.id), shopId: s.id, reserve: p.valorKn, amount: p.valorKn, opt: null, pi: [pi], tl: null, status: 'andamento', created: quando, started: quando, pedidoReal: p.id, paidOut: true };
-      S.orders[o.id] = o;
-      sys(s.id, 'm_prodBought', { pi: [pi], n: p.valorKn });
+      S.orders[o.id] = o; // "Você comprou…" vem do chat (o servidor grava quando o pagamento é confirmado)
     }
+    if (JSON.stringify(o.kmArquivos || []) !== JSON.stringify(p.arquivos || [])) { o.kmArquivos = p.arquivos || []; criado = true; }
     var antes = o.status, mudou = criado;
     if (p.entregueEm && !temEntrega(s.id, o.id)) {
       o.delivered = Date.parse(p.entregueEm);
@@ -262,13 +262,14 @@
     if (!o) {
       var pi = indiceDoProduto(s, p.produto.prototipoId);
       if (pi < 0) return false;
-      o = { id: idCurto(p.id), real: p.id, buyer: p.cliente || t('cliente'), opt: null, pi: [pi], amount: p.valorKn, ts: Date.parse(p.pagoEm || p.criadoEm) || Date.now(), status: 'pago', msgs: [] };
+      o = { id: idCurto(p.id), real: p.id, clienteId: p.clienteId, buyer: p.cliente || t('cliente'), opt: null, pi: [pi], amount: p.valorKn, ts: Date.parse(p.pagoEm || p.criadoEm) || Date.now(), status: 'pago', msgs: [] };
       o.msgs.push({ f: 'sys', key: 'km_soPago', p: { n: p.valorKn, v: reais(p.vendedorCentavos) }, ts: o.ts });
       if (p.entregueEm) { o.delivered = Date.parse(p.entregueEm); o.status = 'entregue'; } // entregue antes (em outro aparelho)
       S.sorders.push(o);
       S.sorders.sort(function (a, b) { return b.ts - a.ts; });
       criado = true;
     }
+    if (!o.clienteId && p.clienteId) o.clienteId = p.clienteId;
     var antes = o.status, mudou = criado;
     if (p.status === 'concluido' && !o.concluido) { o.concluido = true; soPush(o, { f: 'sys', k: 'good', key: 'km_soConcl' }); mudou = true; }
     if (antes === novo) return mudou;
@@ -322,7 +323,8 @@
       var parcial = aprovado && c.valorCentavos != null && p.valorCentavos && c.valorCentavos < p.valorCentavos;
       direita = '<span class="pill ' + (aprovado ? 'warn' : 'off') + '">' + (aprovado ? tr('caseRefunded') + (parcial ? ' · ' + reais(c.valorCentavos) + ' (' + t('parcial') + ')' : '') : tr('caseDenied')) + '</span>';
     }
-    return '<div class="case"><div><b>' + titulo + '</b><span class="muted">' + detalhe + '</span></div>' +
+    var conversa = c.conversaId && window.kmTxtChat ? ' · <button class="link" data-a="kmverconversa" data-id="' + esc(c.conversaId) + '">' + window.kmTxtChat('verConversa') + '</button>' : '';
+    return '<div class="case"><div><b>' + titulo + '</b><span class="muted">' + detalhe + conversa + '</span></div>' +
       '<div class="case-r"><b class="cv">' + reais(p.valorCentavos) + '</b>' + direita + '</div></div>';
   }
   function casosReaisHTML() {
@@ -449,6 +451,15 @@
       var linha = '<div class="dc-more" style="margin:0 0 10px"><span>' + t('problema') + '</span><button class="link" data-a="kmreemb" data-oid="' + esc(o.id) + '">' + t('pedirReemb') + '</button></div>';
       return h.replace('<div class="msgs" id="msgs"', linha + '<div class="msgs" id="msgs"');
     };
+    // Cliente: o cartão da entrega mostra os arquivos que o vendedor anexou para este pedido (etapa 5).
+    var cartaoEntrega = window.deliveryHTML;
+    window.deliveryHTML = function (m) {
+      var h = cartaoEntrega.apply(this, arguments);
+      var o = m && S.orders[m.oid];
+      if (!o || !o.pedidoReal || !(o.kmArquivos || []).length) return h;
+      var arquivos = o.kmArquivos.map(function (a) { return realFile({ asset: a.id, name: a.nome, ext: (a.nome.split('.').pop() || '').toLowerCase(), size: a.tamanho || 0 }); }).join('');
+      return h.replace('<div class="files">', '<div class="files">' + arquivos);
+    };
     var meusPedidos = window.vOrders;
     window.vOrders = function () { if (contaReal()) sincronizarCliente(false); return meusPedidos.apply(this, arguments); };
 
@@ -456,9 +467,15 @@
     var entregar = window.doDeliver;
     window.doDeliver = async function (o, items) {
       if (!o || !o.real) return entregar.apply(this, arguments);
-      try { await api('POST', '/api/pedidos/' + o.real + '/entregue'); } catch (x) { toast(t('falha')); sincronizarVendedor(true); return; }
+      var anexos = [];
+      try {
+        // arquivos feitos para este cliente (etapa 5): sobem primeiro, depois vão junto com a entrega
+        if (window.kmEnviarAnexos) anexos = await window.kmEnviarAnexos();
+        await api('POST', '/api/pedidos/' + o.real + '/entregue', { arquivos: anexos });
+      } catch (x) { toast(x.message && x.status < 500 ? x.message : t('falha')); sincronizarVendedor(true); return; }
       o.items = items; o.status = 'entregue'; o.delivered = Date.now();
       soPush(o, { f: 'me', k: 'sdeliv', items: items });
+      if (anexos.length) soPush(o, { f: 'sys', k: 'good', key: 'km_anexos', p: { v: anexos.map(function (a) { return a.nome; }).join(', ') } });
       save(); render(); toast(tr('spDeliveredToast'));
     };
     var minhaLoja = window.vMyStore;

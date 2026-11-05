@@ -21,7 +21,7 @@ export const concluiAutomaticoEm = (p) => (p.status === 'entregue' && p.entregue
 
 // O que o cliente e o vendedor veem de um pedido (sem dados de cobrança nem do outro lado).
 // reembolso: o pedido de reembolso mais recente desse pedido (se houver).
-export function pedidoParaTela(p, { comCliente = false, reembolso = null } = {}) {
+export function pedidoParaTela(p, { comCliente = false, reembolso = null, arquivos = [] } = {}) {
   return {
     id: p.id,
     status: p.status,
@@ -34,8 +34,9 @@ export function pedidoParaTela(p, { comCliente = false, reembolso = null } = {})
     entregueEm: p.entregue_em || null,
     concluidoEm: p.concluido_em || null,
     concluiSozinhoEm: concluiAutomaticoEm(p),
+    arquivos,
     reembolso: reembolso && { status: reembolso.status, valorCentavos: reembolso.valor_centavos ?? null, decididoEm: reembolso.decidido_em || null },
-    ...(comCliente ? { cliente: (p.cliente_nome || '').split(' ')[0] || '', vendedorCentavos: p.vendedor_centavos } : {}),
+    ...(comCliente ? { cliente: (p.cliente_nome || '').split(' ')[0] || '', clienteId: p.cliente_id, vendedorCentavos: p.vendedor_centavos } : {}),
   };
 }
 
@@ -43,5 +44,12 @@ export function pedidoParaTela(p, { comCliente = false, reembolso = null } = {})
 export function ultimoReembolsoPorPedido(reembolsos) {
   const m = {};
   for (const r of reembolsos) if (!m[r.pedido_id] || String(r.criado_em) > String(m[r.pedido_id].criado_em)) m[r.pedido_id] = r;
+  return m;
+}
+
+// { pedidoId: [{ id, nome, tipo, tamanho }] } dos arquivos anexados na entrega (etapa 5).
+export function arquivosPorPedido(linhas) {
+  const m = {};
+  for (const x of linhas) (m[x.pedido_id] ||= []).push({ id: x.arquivo_id, nome: x.nome, tipo: x.tipo, tamanho: x.tamanho });
   return m;
 }
