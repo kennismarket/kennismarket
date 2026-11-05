@@ -248,10 +248,17 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
     return false;
   };
   // Pode abrir o arquivo de entrega? Dono, quem enviou, o vendedor da loja ou quem pagou o produto.
-  const podeAbrir = async (u, id, entregas) => {
+  // Arquivo anexado na entrega de um pedido (etapa 5): só o cliente e o vendedor daquele pedido.
+  const podeAbrir = async (u, id, entregas, pedidosDoArquivo = []) => {
     if (!u) return false;
     if (u.papel === 'dono') return true;
     if ((await repo.quemEnviouArquivoPrototipo(id)) === u.id) return true;
+    for (const { pedido_id: pid } of pedidosDoArquivo) {
+      const p = await repo.pedido(pid);
+      if (!p) continue;
+      if (p.cliente_id === u.id) return true;
+      if ((await repo.loja(p.loja_id))?.vendedor_id === u.id) return true;
+    }
     const donas = await donasDasLojas(repo);
     for (const d of entregas) {
       const pkey = pkeyDoArquivo(d.id, d.dados);
@@ -269,9 +276,10 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
     if (!ID_ARQUIVO.test(req.params.id)) throw erro(400, 'id inválido');
     if (!entregasSoPagas) return res.json({ url: `/_blob/${req.params.id}` });
     const entregas = await entregasDoArquivo(req.params.id);
-    if (!(await trancado(entregas))) return res.json({ url: `/_blob/${req.params.id}` });
+    const doPedido = await repo.pedidosDoArquivoEntrega(req.params.id);
+    if (!doPedido.length && !(await trancado(entregas))) return res.json({ url: `/_blob/${req.params.id}` });
     const u = await usuarioDe(req);
-    if (!(await podeAbrir(u, req.params.id, entregas))) throw negar(u, 'arquivo liberado só depois do pagamento');
+    if (!(await podeAbrir(u, req.params.id, entregas, doPedido))) throw negar(u, 'arquivo liberado só depois do pagamento');
     res.json({ url: linkAssinado(req.params.id) });
   }));
 
@@ -303,7 +311,9 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
     if (!ID_ARQUIVO.test(req.params.id)) throw erro(404, 'arquivo não encontrado');
     // Trava ligada: arquivo de entrega só abre com o link assinado (logos e imagens continuam abertos).
     const assinado = entregasSoPagas && assinaturaValida(req.params.id, req.query.ate, req.query.ass);
-    if (entregasSoPagas && !assinado && await trancado(await entregasDoArquivo(req.params.id))) throw erro(403, 'arquivo liberado só depois do pagamento');
+    if (entregasSoPagas && !assinado && ((await repo.pedidosDoArquivoEntrega(req.params.id)).length || await trancado(await entregasDoArquivo(req.params.id)))) {
+      throw erro(403, 'arquivo liberado só depois do pagamento');
+    }
     const a = await repo.lerArquivoPrototipo(req.params.id);
     if (!a) throw erro(404, 'arquivo não encontrado');
     res.set({

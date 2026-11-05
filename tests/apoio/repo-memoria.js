@@ -5,7 +5,7 @@ const bate = (linha, condicoes = {}) => Object.entries(condicoes).every(([campo,
   [].concat(valores).some((v) => (v === null ? linha[campo] == null : linha[campo] === v)));
 
 export function criarRepoMemoria() {
-  const t = { usuarios: {}, lojas: {}, dadosRecebimento: {}, produtos: {}, pedidos: {}, reembolsos: {}, debitos: {}, cotacoes: [], eventos: new Set(), docs: {}, arquivos: {}, contas: {} };
+  const t = { conversas: {}, mensagens: [], entregaArquivos: [], usuarios: {}, lojas: {}, dadosRecebimento: {}, produtos: {}, pedidos: {}, reembolsos: {}, debitos: {}, cotacoes: [], eventos: new Set(), docs: {}, arquivos: {}, contas: {} };
   const copia = (x) => (x ? structuredClone(x) : null);
   const ultimasPorMoeda = (ate) => {
     const m = {};
@@ -203,6 +203,48 @@ export function criarRepoMemoria() {
     },
     async debito(id) { return copia(t.debitos[id]); },
     async atualizarDebito(id, campos) { if (!t.debitos[id]) return null; Object.assign(t.debitos[id], campos); return copia(t.debitos[id]); },
+    // ---------- chat ----------
+    async conversa(id) { return copia(t.conversas[id]); },
+    async conversaPor(lojaId, clienteId) { return copia(Object.values(t.conversas).find((c) => c.loja_id === lojaId && c.cliente_id === clienteId)); },
+    async abrirConversa(lojaId, clienteId) {
+      let c = Object.values(t.conversas).find((x) => x.loja_id === lojaId && x.cliente_id === clienteId);
+      if (!c) { c = { id: crypto.randomUUID(), loja_id: lojaId, cliente_id: clienteId, criada_em: new Date().toISOString() }; t.conversas[c.id] = c; }
+      return copia(c);
+    },
+    async listarConversas({ clienteId, lojaIds, marcadas } = {}) {
+      return Object.values(t.conversas)
+        .filter((c) => (!clienteId || c.cliente_id === clienteId) && (!lojaIds || lojaIds.includes(c.loja_id)) && (!marcadas || c.marcada_em))
+        .sort((a, b) => String(b.ultima_em || '').localeCompare(String(a.ultima_em || '')))
+        .map((c) => {
+          const loja = t.lojas[c.loja_id] || {};
+          const cli = t.contas[c.cliente_id] || Object.values(t.usuarios).find((u) => u.id === c.cliente_id) || {};
+          return { ...copia(c), loja_nome: loja.nome || '', loja_prototipo_id: loja.prototipo_id ?? null, loja_vendedor_id: loja.vendedor_id ?? null, cliente_nome: cli.nome || '' };
+        });
+    },
+    async mensagensDaConversa(conversaId, { depois = 0, limite = 200 } = {}) {
+      const todas = t.mensagens.filter((m) => m.conversa_id === conversaId);
+      return (depois > 0 ? todas.filter((m) => m.id > depois).slice(0, limite) : todas.slice(-limite)).map(copia);
+    },
+    async criarMensagem(campos) {
+      const m = { id: t.mensagens.length + 1, texto: '', chave: null, params: null, autor_id: null, enviada_em: new Date(Date.now() + t.mensagens.length).toISOString(), ...campos };
+      t.mensagens.push(m);
+      Object.assign(t.conversas[m.conversa_id], { ultima_em: m.enviada_em, ultima_previa: (m.texto || '').slice(0, 140), ultima_de: m.de });
+      return copia(m);
+    },
+    async atualizarConversa(id, campos) { if (!t.conversas[id]) return null; Object.assign(t.conversas[id], campos); return copia(t.conversas[id]); },
+    async salvarArquivosEntrega(linhas) {
+      const novas = [];
+      for (const l of linhas) {
+        if (t.entregaArquivos.some((x) => x.pedido_id === l.pedido_id && x.arquivo_id === l.arquivo_id)) continue;
+        const x = { id: t.entregaArquivos.length + 1, enviado_em: new Date().toISOString(), ...l };
+        t.entregaArquivos.push(x); novas.push(copia(x));
+      }
+      return novas;
+    },
+    async arquivosDasEntregas(pedidoIds) { return t.entregaArquivos.filter((x) => pedidoIds.includes(x.pedido_id)).map(copia); },
+    async pedidosDoArquivoEntrega(arquivoId) { return t.entregaArquivos.filter((x) => x.arquivo_id === arquivoId).map((x) => ({ pedido_id: x.pedido_id })); },
+    async infoArquivoPrototipo(id) { const a = t.arquivos[id]; return a ? { id, tipo: a.tipo, tamanho: a.conteudo.length, enviado_por: a.enviadoPor || null } : null; },
+
     async listarDocsPrototipo(colecao) {
       return Object.entries(t.docs[colecao] || {}).map(([id, dados]) => ({ id, dados: structuredClone(dados) }));
     },

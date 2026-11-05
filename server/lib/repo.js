@@ -307,6 +307,61 @@ export const repo = {
     return checar(await db().from('debitos_vendedor').update(campos).eq('id', id).select().maybeSingle());
   },
 
+  // ---------- chat (etapa 5) ----------
+  async conversa(id) {
+    return checar(await db().from('conversas').select('*').eq('id', id).maybeSingle());
+  },
+  async conversaPor(lojaId, clienteId) {
+    return checar(await db().from('conversas').select('*').eq('loja_id', lojaId).eq('cliente_id', clienteId).maybeSingle());
+  },
+  // Cria a conversa do cliente com a loja (ou devolve a que já existe).
+  async abrirConversa(lojaId, clienteId) {
+    checar(await db().from('conversas').upsert({ loja_id: lojaId, cliente_id: clienteId }, { onConflict: 'loja_id,cliente_id', ignoreDuplicates: true }));
+    return this.conversaPor(lojaId, clienteId);
+  },
+  // Conversas com a loja e o nome do cliente. Filtros: clienteId, lojaIds, marcadas. Da mais recente para a mais antiga.
+  async listarConversas({ clienteId, lojaIds, marcadas } = {}) {
+    let q = db().from('conversas').select('*, loja:lojas(nome, prototipo_id, vendedor_id), cliente:perfis(nome)')
+      .order('ultima_em', { ascending: false, nullsFirst: false }).limit(500);
+    if (clienteId) q = q.eq('cliente_id', clienteId);
+    if (lojaIds) { if (!lojaIds.length) return []; q = q.in('loja_id', lojaIds); }
+    if (marcadas) q = q.not('marcada_em', 'is', null);
+    return checar(await q).map(({ loja, cliente, ...c }) => ({
+      ...c, loja_nome: loja?.nome || '', loja_prototipo_id: loja?.prototipo_id ?? null, loja_vendedor_id: loja?.vendedor_id ?? null, cliente_nome: cliente?.nome || '',
+    }));
+  },
+  // Mensagens depois do id "depois" (em ordem); sem "depois", as últimas "limite".
+  async mensagensDaConversa(conversaId, { depois = 0, limite = 200 } = {}) {
+    if (depois > 0) {
+      return checar(await db().from('mensagens').select('*').eq('conversa_id', conversaId).gt('id', depois).order('id', { ascending: true }).limit(limite));
+    }
+    return checar(await db().from('mensagens').select('*').eq('conversa_id', conversaId).order('id', { ascending: false }).limit(limite)).reverse();
+  },
+  // Grava a mensagem e atualiza a "última mensagem" da conversa.
+  async criarMensagem(campos) {
+    const m = checar(await db().from('mensagens').insert(campos).select().single());
+    checar(await db().from('conversas').update({ ultima_em: m.enviada_em, ultima_previa: (m.texto || '').slice(0, 140), ultima_de: m.de }).eq('id', m.conversa_id));
+    return m;
+  },
+  async atualizarConversa(id, campos) {
+    return checar(await db().from('conversas').update(campos).eq('id', id).select().maybeSingle());
+  },
+  // ---------- arquivos anexados na entrega (etapa 5) ----------
+  async salvarArquivosEntrega(linhas) {
+    if (!linhas.length) return [];
+    return checar(await db().from('entrega_arquivos').upsert(linhas, { onConflict: 'pedido_id,arquivo_id', ignoreDuplicates: true }).select());
+  },
+  async arquivosDasEntregas(pedidoIds) {
+    if (!pedidoIds.length) return [];
+    return checar(await db().from('entrega_arquivos').select('*').in('pedido_id', pedidoIds).order('id', { ascending: true }));
+  },
+  async pedidosDoArquivoEntrega(arquivoId) {
+    return checar(await db().from('entrega_arquivos').select('pedido_id').eq('arquivo_id', arquivoId));
+  },
+  async infoArquivoPrototipo(id) {
+    return checar(await db().from('prototipo_arquivos').select('id, tipo, tamanho, enviado_por').eq('id', id).maybeSingle());
+  },
+
   // ---------- protótipo (versão de testes): documentos e arquivos, como no claude.ai ----------
   async listarDocsPrototipo(colecao) {
     const linhas = checar(await db().from('prototipo_docs').select('id, dados').eq('colecao', colecao).limit(5000));

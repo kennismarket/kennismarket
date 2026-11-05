@@ -1,3 +1,4 @@
+import { avisarPagamento } from '../lib/chat.js';
 import { Router } from 'express';
 
 // O banco de pagamento chama este endereço sozinho a cada pagamento, devolução ou split.
@@ -55,6 +56,8 @@ async function aplicar(repo, provedor, ev) {
       if (!mudou.length && ev.repasse) {
         await repo.atualizarPedidos(onde, { repasse_status: ev.repasse }, { repasse_status: ['aguardando', 'processando'] });
       }
+      // mensagens automáticas no chat (só na primeira vez que o pedido vira "pago")
+      for (const p of mudou) await avisarPagamento(repo, p);
       break;
     }
     case 'repasse_concluido':

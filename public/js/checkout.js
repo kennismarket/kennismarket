@@ -169,8 +169,14 @@
         var n = c.preco.valorKn, id = newId(), loja = c.loja;
         S.orders[id] = { id: id, shopId: loja.id, reserve: n, amount: n, opt: null, pi: [c.prodIndex], tl: null, status: 'andamento', created: Date.now(), started: Date.now(), pedidoReal: pedido.id || null };
         S.tab = 'chat';
-        push(loja.id, { f: 'sys', key: 'm_prodBought', p: { pi: [c.prodIndex], n: n } });
-        save(); render(); schedule(S.orders[id]); sellerSays(loja.id, 'm_started', {}, 900);
+        if (pedido.id && window.kmSincronizarLoja) {
+          // pedido real: as mensagens automáticas ("Você comprou…", "Combinado! Já comecei…") foram
+          // gravadas pelo servidor na conversa (etapa 5); o chat busca agora
+          save(); render(); window.kmSincronizarLoja(loja.id);
+        } else {
+          push(loja.id, { f: 'sys', key: 'm_prodBought', p: { pi: [c.prodIndex], n: n } });
+          save(); render(); schedule(S.orders[id]); sellerSays(loja.id, 'm_started', {}, 900);
+        }
         toast(t('pago'));
       },
     });

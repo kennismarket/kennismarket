@@ -223,5 +223,29 @@ do $$ begin
   assert (select count(*) from lojas where vendedor_id = '00000000-0000-0000-0000-00000000000c') >= 3, 'uma conta com várias lojas';
 end $$;
 
+-- 0008: chat (mensagens automáticas, marcação) e arquivos da entrega
+do $$ declare c uuid; begin
+  insert into conversas (loja_id, cliente_id) values ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000000a') returning id into c;
+  insert into mensagens (conversa_id, autor_id, de, texto) values (c, '00000000-0000-0000-0000-00000000000a', 'cliente', 'Oi!');
+  insert into mensagens (conversa_id, de, chave, params) values (c, 'sistema', 'm_prodBought', '{"n": 10}');
+  begin
+    insert into mensagens (conversa_id, autor_id, de, texto) values (c, '00000000-0000-0000-0000-00000000000a', 'cliente', '');
+    raise exception 'devia recusar mensagem vazia sem chave';
+  exception when check_violation then null; end;
+  begin
+    insert into mensagens (conversa_id, de, texto) values (c, 'robo', 'x');
+    raise exception 'devia recusar lado desconhecido';
+  exception when check_violation then null; end;
+  update conversas set marcada_em = now(), marcada_motivo = 'telefone' where id = c;
+end $$;
+do $$ begin
+  insert into prototipo_arquivos (id, tipo, tamanho) values (repeat('e', 32), 'application/pdf', 10);
+  insert into entrega_arquivos (pedido_id, arquivo_id, nome, tipo) values ('30000000-0000-0000-0000-000000000001', repeat('e', 32), 'analise.pdf', 'application/pdf');
+  begin
+    insert into entrega_arquivos (pedido_id, arquivo_id, nome, tipo) values ('30000000-0000-0000-0000-000000000001', repeat('e', 32), 'de novo.pdf', 'application/pdf');
+    raise exception 'devia recusar o mesmo arquivo duas vezes no pedido';
+  exception when unique_violation then null; end;
+end $$;
+
 rollback;
 \echo 'BANCO: todas as verificações passaram'

@@ -32,7 +32,7 @@
 | 2 | Lojas e produtos (com lojas e avaliações de mentira na versão de testes), upload de arquivos | feito: lojas seguras, cópia nas tabelas reais, porcentagem por loja no pedido; trava "arquivos só para quem pagou" ligada nas lojas de vendedores reais |
 | 3 | Tela de checkout no site (o servidor de pagamento já está pronto, com o simulado) | feito com o pagamento simulado (um produto por vez; vendedor cadastra o Pix). Falta: provedor real da Transfeera (etapa 0d), comprar vários produtos/tradução e pagar a proposta do chat (com a etapa 5) |
 | 4 | Telas de pedidos, entrega e reembolso + painel do suporte | feito (03/11/2026) com o pagamento simulado. Falta: testar com a Transfeera (etapa 0d) e o chat real (etapa 5) |
-| 5 | Chat cliente ↔ vendedor | |
+| 5 | Chat cliente ↔ vendedor | feito (05/11/2026): chat real, mensagens automáticas do pagamento, aviso de mensagem nova, conversas marcadas, suporte lê nos chamados, arquivos na entrega. Proposta paga pelo chat: não vai ser feita (decisão dos donos) |
 | 6 | Painel do vendedor com o valor a receber | feito (04/11/2026): Faturamento da conta (Minha conta, soma todas as lojas) e Faturamento da loja (Minha loja); débitos quitados/perdoados pelo dono. Falta: testar o repasse com a Transfeera |
 | 7 | Links de convite (só donos) | |
 | — | Revisão de segurança por um dev antes de ligar dinheiro real | obrigatório |
@@ -81,7 +81,7 @@ Pago  →  Entregue  →  Concluído (o cliente confirma, ou sozinho 7 dias depo
 
 **Próximas etapas**
 - **4**: feita (seção acima); falta testar com a Transfeera e marcar débitos como quitados.
-- **5**: chat real cliente ↔ vendedor (hoje as respostas do vendedor são simuladas).
+- **5**: feita. Para depois: arquivo solto no meio do chat e aviso por e-mail de mensagem nova (precisa do Resend).
 - **6**: feita (Faturamento da conta e da loja). Falta testar o repasse com a Transfeera.
 - **Várias lojas por conta**: feito (04/11/2026). Até 10 lojas por conta, seletor e "Criar outra loja" em Minha loja,
   Pix e pedidos por loja; a conta de demonstração de vendedor mostra tudo isso no navegador.

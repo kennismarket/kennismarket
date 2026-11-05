@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { Router } from 'express';
 import { documentoValido } from '../lib/documentos.js';
 import { dividirVenda, knParaCentavos, PORCENTAGEM_VENDEDOR } from '../lib/dinheiro.js';
-import { concluirEntreguesVencidos, pedidoParaTela, STATUS_DEPOIS_DE_PAGO, ultimoReembolsoPorPedido } from '../lib/pedidos.js';
+import { arquivosPorPedido, concluirEntreguesVencidos, pedidoParaTela, STATUS_DEPOIS_DE_PAGO, ultimoReembolsoPorPedido } from '../lib/pedidos.js';
 import { recebedorDaLinha } from '../lib/recebimento.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
 
@@ -145,17 +145,32 @@ export function rotasPedidos({ repo, pagamentos }) {
     await concluirEntreguesVencidos(repo);
     const lista = await repo.listarPedidos({ clienteId: req.usuario.id, status: STATUS_DEPOIS_DE_PAGO });
     const rbs = ultimoReembolsoPorPedido(await repo.listarReembolsos({ pedidoIds: lista.map((p) => p.id), limite: 1000 }));
-    res.json({ pedidos: lista.map((p) => pedidoParaTela(p, { reembolso: rbs[p.id] })) });
+    const arquivos = arquivosPorPedido(await repo.arquivosDasEntregas(lista.map((p) => p.id)));
+    res.json({ pedidos: lista.map((p) => pedidoParaTela(p, { reembolso: rbs[p.id], arquivos: arquivos[p.id] })) });
   }));
 
   r.get('/:id', rota(async (req, res) => {
     res.json(await carregar(req, ['cliente', 'vendedor', 'dono']));
   }));
 
-  // Vendedor marca como entregue (só depois de pago).
+  // Vendedor marca como entregue (só depois de pago). Pode anexar arquivos feitos para este
+  // cliente (etapa 5): { arquivos: [{ id, nome }] }, enviados antes por POST /api/prototipo/arquivos.
+  // Só o cliente do pedido, o vendedor e o suporte abrem esses arquivos.
   r.post('/:id/entregue', rota(async (req, res) => {
     const p = await carregar(req, ['vendedor']);
-    res.json(await mudar(p, ['pago'], { status: 'entregue', entregue_em: new Date().toISOString() }));
+    const anexos = Array.isArray(req.body?.arquivos) ? req.body.arquivos : [];
+    if (anexos.length > 10) throw erro(400, 'no máximo 10 arquivos por entrega');
+    const linhas = [];
+    for (const a of anexos) {
+      const id = String(a?.id || '');
+      const info = /^[0-9a-f]{32}$/.test(id) ? await repo.infoArquivoPrototipo(id) : null;
+      if (!info || info.enviado_por !== req.usuario.id) throw erro(400, 'arquivo inválido');
+      const nome = String(a.nome || 'arquivo').replace(/[\\/\u0000-\u001f]/g, ' ').trim().slice(0, 200) || 'arquivo';
+      linhas.push({ pedido_id: p.id, arquivo_id: id, nome, tipo: info.tipo, tamanho: info.tamanho });
+    }
+    const novo = await mudar(p, ['pago'], { status: 'entregue', entregue_em: new Date().toISOString() });
+    const arquivos = await repo.salvarArquivosEntrega(linhas);
+    res.json({ ...novo, arquivos: arquivos.map((x) => ({ id: x.arquivo_id, nome: x.nome, tipo: x.tipo, tamanho: x.tamanho })) });
   }));
 
   // Cliente confirma que recebeu.
