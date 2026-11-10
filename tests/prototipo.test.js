@@ -42,8 +42,8 @@ test('a página do site é o protótipo, só com os ajustes de ligação e o íc
   assert.match(html, /<meta name="google" content="notranslate">/);
   assert.match(html, /const SITE_URL=location\.origin\+"\/";/);
   assert.match(html, /var RATES_URL="\/api\/rates";/);
-  // gerador de logos v3: carregado depois do script do protótipo
-  assert.match(html, /<script src="\/js\/logo3\.js"><\/script><\/body>/);
+  // gerador de logos v3 e produto da loja modelo: carregados depois do script do protótipo
+  assert.match(html, /<script src="\/js\/logo3\.js"><\/script><script src="\/js\/produto-modelo\.js"><\/script><\/body>/);
   assert.doesNotMatch(html, /claude\.ai\/artifact/);
   // qualquer outro endereço também abre o protótipo; a ponte é servida como arquivo
   assert.match(await (await fetch(base + '/qualquer-coisa')).text(), /Kennismarket/);
