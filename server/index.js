@@ -2,6 +2,7 @@ import { config, avisos } from './config.js';
 import { criarApp } from './app.js';
 import { espelharTodas } from './lib/espelho-lojas.js';
 import { repo } from './lib/repo.js';
+import { aplicarLogosOficiais } from './lib/logos-lojas.js';
 
 const app = criarApp();
 const { pagamentos } = app.locals;
@@ -17,4 +18,11 @@ app.listen(config.porta, () => {
   espelharTodas(repo)
     .then((r) => { console.log(`Lojas copiadas para as tabelas: ${r.copiadas}`); r.erros.forEach((e) => console.error('cópia de loja:', e)); })
     .catch((e) => console.error('cópia das lojas falhou:', e.message));
+  // Logos oficiais das lojas que já existiam (cada uma é aplicada uma vez só).
+  aplicarLogosOficiais(repo, { mudou: app.locals.mudouPrototipo })
+    .then((r) => {
+      if (r.aplicadas.length) console.log(`Logos oficiais aplicadas: ${r.aplicadas.join(', ')}`);
+      if (r.semLoja.length) console.warn(`Logos oficiais sem loja (ainda não aplicadas): ${r.semLoja.join(', ')}`);
+    })
+    .catch((e) => console.error('logos oficiais falharam:', e.message));
 });

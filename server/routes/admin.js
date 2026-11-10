@@ -4,6 +4,7 @@ import { debitoDoVendedor } from '../lib/dinheiro.js';
 import { DIAS_CONFIRMACAO_AUTOMATICA } from '../lib/pedidos.js';
 import { avisarPagamento, conversaParaTela, mensagemParaTela } from '../lib/chat.js';
 import { espelharLoja, espelharTodas } from '../lib/espelho-lojas.js';
+import { aplicarLogosOficiais } from '../lib/logos-lojas.js';
 import { resumoFaturamento } from '../lib/vendas.js';
 import { donasDasLojas, idDaLoja } from '../lib/lojas-prototipo.js';
 import { erro, exigirDono, exigirUsuario, rota } from '../lib/seguranca.js';
@@ -19,6 +20,8 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
   // Copia de novo todas as lojas do protótipo para as tabelas reais (o servidor já faz isso
   // sozinho a cada gravação e ao ligar; isto serve para conferir ou consertar).
   r.post('/lojas/copiar', rota(async (_req, res) => res.json(await espelharTodas(repo))));
+  // Aplica de novo as logos oficiais que ainda faltam (o servidor já faz isso ao ligar).
+  r.post('/lojas/logos', rota(async (_req, res) => res.json(await aplicarLogosOficiais(repo, { mudou: mudouPrototipo }))));
 
   // ---------- vendedores (seção "Contas" do painel do dono) ----------
   // Cada vendedor com a loja, o número de vendas e o total vendido; ?vendas=1 traz cada venda.

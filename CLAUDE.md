@@ -92,6 +92,7 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 
 ## Marca
 - Logo: **o do protótipo** (decisão dos donos): o texto **"Kennismarket."** com o ponto verde e o **K dentro do hexágono** prateado (login e página inicial do protótipo). Hexágonos são permitidos no site todo.
+- **Logos das lojas existentes (novembro/2026):** os donos mandaram uma logo SVG para cada uma das 40 lojas do protótipo (`server/dados/logos-lojas/`, `lojas.json` diz qual é de qual loja). Ao ligar, o servidor coloca cada uma na sua loja **uma vez só** (`server/lib/logos-lojas.js`; registro em `stores/cfg-logos-oficiais`); se depois alguém trocar a logo pelo editor, ela não volta. Trocar um SVG da pasta aplica de novo aquela loja. Também por `POST /api/admin/lojas/logos`.
 - Paleta: principal `#102A43`, base `#FFFFFF`, destaque financeiro `#16805D`, estrutura `#F3F6F9`, texto secundário `#526579`.
 - Estética: design holandês, sóbrio e em grade. Tem que funcionar perfeito no celular e no computador.
 - E-mail de suporte: kennismarket.support@protonmail.com

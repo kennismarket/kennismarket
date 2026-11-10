@@ -31,6 +31,7 @@ export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), pa
   app.set('trust proxy', 1); // o Render fica na frente: o IP do visitante vem no cabeçalho
   app.locals.pagamentos = pagamentos;
   app.locals.prototipoFaltando = paginaPrototipo.faltando;
+  app.locals.mudouPrototipo = prototipo.mudou;
 
   // O aviso do banco precisa chegar exatamente como foi enviado, para conferir a assinatura.
   app.use('/api/webhooks/pagamento', express.raw({ type: () => true, limit: '1mb' }), rotaWebhookPagamento(deps));
