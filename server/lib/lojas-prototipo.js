@@ -36,15 +36,22 @@ export async function donasDasLojas(repo) {
   return donas;
 }
 
-// Loja (id) que tem o produto: os arquivos de entrega usam pkey = "p" + id do produto.
-export async function lojaDoProduto(repo, pkey) {
-  if (typeof pkey !== 'string' || !pkey.startsWith('p')) return null;
-  const produto = pkey.slice(1);
-  for (const d of await repo.listarDocsPrototipo('stores')) {
-    const st = d.dados?.store;
-    if (st?.id != null && Array.isArray(st.prods) && st.prods.some((p) => p && p.id === produto)) return st.id;
-  }
-  return null;
+// TODAS as lojas que têm o produto (os arquivos de entrega usam pkey = "p" + id do produto),
+// com o produto de cada uma. Olha os documentos das lojas e as cópias nos documentos dos vendedores.
+// Lojas antigas geradas de uma loja modelo podem repetir o id do produto do modelo: por isso a
+// permissão olha todas, e não a primeira que aparecer (correção de segurança, 10/11/2026).
+export async function lojasDoProduto(repo, pkey) {
+  if (typeof pkey !== 'string' || !pkey.startsWith('p')) return [];
+  const id = pkey.slice(1);
+  const achadas = new Map();
+  const olhar = (st) => {
+    if (st?.id == null || !Array.isArray(st.prods) || achadas.has(Number(st.id))) return;
+    const produto = st.prods.find((p) => p && String(p.id) === id);
+    if (produto) achadas.set(Number(st.id), produto);
+  };
+  for (const d of await repo.listarDocsPrototipo('stores')) olhar(d.dados?.store);
+  for (const d of await repo.listarDocsPrototipo('sellers')) olhar(d.dados?.acc?.store);
+  return [...achadas].map(([lojaId, produto]) => ({ lojaId, produto }));
 }
 
 // pkey de um documento de arquivo de entrega: o campo pkey, ou o id "h-<pkey>-<idioma>".

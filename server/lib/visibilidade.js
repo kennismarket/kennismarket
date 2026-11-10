@@ -44,7 +44,7 @@ function limparProduto(p) {
     if (k === 'name' || k === 'desc') out[k] = traduzido(v);
     else if (k === 'price') { const n = numero(v); out.price = Number.isFinite(n) ? n : 0; }
     else if (k === 'deliv') out.deliv = Array.isArray(v) ? v.filter((x) => x == null || ['string', 'number'].includes(typeof x) || typeof x === 'object') : [];
-    else if (k === 'id') out.id = String(v).replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 80);
+    else if (k === 'id' || k === 'srcp') out[k] = String(v).replace(/[^A-Za-z0-9_.:-]/g, '').slice(0, 80);
     else if (v == null || ['number', 'boolean'].includes(typeof v)) out[k] = v;
     else if (typeof v === 'string') out[k] = v.slice(0, 2000);
     else out[k] = v;
