@@ -1,7 +1,8 @@
 /* Carregado pelo site logo depois do script do protótipo (server/lib/pagina-prototipo.js, ajuste
    "gerador de logos v3"), por isso já encontra glogoSVG, genLogoSpec2, genStore e render prontos.
-   Arquivo dos donos (novembro/2026). Única mudança: class="glogo" no <svg>, para a logo ocupar o
-   quadrado inteiro como as logos v1/v2 (CSS .glogo do protótipo).
+   Arquivo dos donos (novembro/2026). Mudanças: class="glogo" no <svg>, para a logo ocupar o
+   quadrado inteiro como as logos v1/v2 (CSS .glogo do protótipo); e o código "u" e a paleta "P" da
+   logo salva são limpos antes de desenhar (segurança: ninguém coloca código na página por eles).
    As fontes já são carregadas pelo <link> do Google Fonts do protótipo. */
 /* =========================================================
    Gerador de logos v3 — estilo "profissional": fundo em degradê, volume (luz/sombra),
@@ -90,7 +91,7 @@ var GL3_CAT={
 };
 function genLogoSpec3(c){const L=GL3_CAT[c]||Object.keys(GL3_MARK);return {v:3,M:L[glR(L.length)],P:glR(GL3_PAL.length),L:glR(6),F:glR(GL3_FONTS.length),u:Math.random().toString(36).slice(2,8)}}
 function glogoSVG3(g,s){
-  const [b1,b2,m,a,sh]=GL3_PAL[g.P%GL3_PAL.length],u="k"+(g.u||"x"),light=glLum(b1)>.5;
+  const [b1,b2,m,a,sh]=GL3_PAL[(Number(g.P)||0)%GL3_PAL.length],u="k"+String(g.u||"x").replace(/[^A-Za-z0-9]/g,""),light=glLum(b1)>.5;
   const c={m,a,s:sh,d:b2,u};const mark=(GL3_MARK[g.M]||GL3_MARK.spark)(c);
   const ini=initialsTxt(s||{n:"K"})[0]||"K",f=GL3_FONTS[g.F%GL3_FONTS.length];
   const fx=`filter="url(#${u}sh)"`;let body="";

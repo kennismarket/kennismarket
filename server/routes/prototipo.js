@@ -6,6 +6,7 @@ import { limitePorIp } from '../lib/limite.js';
 import { espelharDepois } from '../lib/espelho-lojas.js';
 import { CAMPOS_DO_DONO, MAX_LOJAS_POR_CONTA, SPLIT_MAX, SPLIT_MIN, donasDasLojas, idDaLoja, lojaDoProduto, pkeyDoArquivo } from '../lib/lojas-prototipo.js';
 import { DOMINIO_TESTE, erro, rota } from '../lib/seguranca.js';
+import { docsVisiveis, limparDocumento } from '../lib/visibilidade.js';
 
 // Recursos que o protótipo usava do claude.ai, agora guardados no Supabase:
 // - "db": coleções de documentos (lojas, arquivos de entrega, contas de vendedor);
@@ -23,9 +24,11 @@ const MAX_ESPACO = 900 * 1024 * 1024; // o plano grátis do Supabase guarda 1 GB
 export const TIPOS = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml',
   'video/mp4', 'video/webm', 'text/plain', 'text/csv', 'text/markdown', 'application/json'];
 
-// Quem grava o quê (etapa 2: lojas seguras). Ler continua aberto, como no protótipo.
+// Quem grava o quê (etapa 2: lojas seguras). Ler: cada um vê só o que pode (lib/visibilidade.js):
+// convites só o dono (e quem abriu aquele link); contas de vendedor, o próprio vendedor.
 // - stores/cfg-*: só o dono do site (e-mail do suporte).
-// - stores/inv-*: criar e apagar convite, só o dono; atualizar um convite, quem tem login.
+// - stores/inv-*: criar, mudar e apagar convite, só o dono (a conta do vendedor é ligada ao
+//   convite pelo servidor, em routes/contas.js).
 // - stores/s<id> (lojas): o dono do site, qualquer loja; o vendedor, só a dele (e cria
 //   uma, se ainda não tiver). Nota, vendas, selo e porcentagem são só do dono do site.
 //   Loja banida: o vendedor não grava, e ela fica fora do catálogo.
@@ -84,8 +87,7 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
       return dados;
     }
     if (c === 'stores' && id.startsWith('inv-')) {
-      if ((metodo === 'DELETE' || !atual) && !dono) throw negar(u, 'só os donos');
-      if (!u) throw negar(u);
+      if (!dono) throw negar(u, 'só os donos');
       return dados;
     }
     if (c === 'stores') {
@@ -172,18 +174,23 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
   };
 
   // Lista uma coleção. Se o navegador já tem a versão atual, responde sem os documentos.
+  // Cada pessoa recebe a sua versão (dono, conta, visitante, link de convite aberto).
+  const apelido = (token) => crypto.createHmac('sha256', SEGREDO_LINKS).update(`vendedor|${token}`).digest('hex').slice(0, 16);
   api.get('/colecoes/:colecao', rota(async (req, res) => {
     const c = colecao(req);
-    const versao = versoes[c];
-    if (String(req.query.versao) === String(versao)) return res.json({ versao, inalterado: true });
-    res.json({ versao, docs: await repo.listarDocsPrototipo(c) });
+    const u = await usuarioDe(req).catch(() => null);
+    const dono = u?.papel === 'dono';
+    const convite = /^[a-z0-9]{4,40}$/.test(String(req.query.convite || '')) ? String(req.query.convite) : null;
+    const versao = `${versoes[c]}.${dono ? 'd' : u ? `u${u.id}` : 'a'}${convite ? `.${convite}` : ''}`;
+    if (String(req.query.versao) === versao) return res.json({ versao, inalterado: true });
+    res.json({ versao, docs: docsVisiveis(c, await repo.listarDocsPrototipo(c), { dono, contaId: u?.id || null, convite, apelido }) });
   }));
 
   api.put('/docs/:colecao/:id', gravacoes, rota(async (req, res) => {
     const c = colecao(req);
     const id = docId(req);
-    const dados = req.body?.dados;
-    if (!dados || typeof dados !== 'object' || Array.isArray(dados)) throw erro(400, 'dados inválidos');
+    if (!req.body?.dados || typeof req.body.dados !== 'object' || Array.isArray(req.body.dados)) throw erro(400, 'dados inválidos');
+    const dados = limparDocumento(c, req.body.dados); // cada campo da loja só no formato esperado
     if (JSON.stringify(dados).length > MAX_DOC) throw erro(413, 'documento grande demais');
     const antes = (await repo.listarDocsPrototipo(c)).find((d) => d.id === id)?.dados;
     const gravado = await autorizar(req, 'PUT', c, id, dados);

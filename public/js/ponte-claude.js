@@ -21,11 +21,11 @@
   }
 
   async function json(url, opcoes) {
-    // Gravações levam o login, se houver (public/js/contas.js): o servidor exige o dono
-    // para criar e apagar convites, mudar a configuração e apagar contas de vendedor.
-    if (opcoes && opcoes.method && window.kmToken) {
+    // Tudo leva o login, se houver (public/js/contas.js): o servidor exige o dono para mexer em
+    // convites e na configuração, e cada pessoa só lê o que pode (convites, contas de vendedor).
+    if (window.kmToken) {
       var token = await window.kmToken();
-      if (token) opcoes.headers = Object.assign({}, opcoes.headers, { Authorization: 'Bearer ' + token });
+      if (token) { opcoes = opcoes || {}; opcoes.headers = Object.assign({}, opcoes.headers, { Authorization: 'Bearer ' + token }); }
     }
     var r = await fetch(url, opcoes);
     var corpo = await r.json().catch(function () { return {}; });
@@ -51,7 +51,9 @@
     function buscar(c, forcar) {
       if (buscando[c] && !forcar) return buscando[c];
       var versao = !forcar && estado[c] ? estado[c].versao : '';
-      buscando[c] = json(API + '/colecoes/' + c + '?versao=' + encodeURIComponent(versao))
+      // Link de convite aberto (#convite-<código>): o servidor manda aquele convite e a conta dele.
+      var convite = (location.hash.match(/^#convite-([a-z0-9]+)$/) || [])[1];
+      buscando[c] = json(API + '/colecoes/' + c + '?versao=' + encodeURIComponent(versao) + (convite ? '&convite=' + convite : ''))
         .then(function (r) {
           if (r.inalterado) return;
           estado[c] = { versao: r.versao, docs: r.docs };
