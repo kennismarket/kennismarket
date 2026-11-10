@@ -4,7 +4,7 @@ import { config } from '../config.js';
 import { codigoDoErro, iaDisponivel, responderSuporte, validarTurnos } from '../lib/ia.js';
 import { limitePorIp } from '../lib/limite.js';
 import { espelharDepois } from '../lib/espelho-lojas.js';
-import { CAMPOS_DO_DONO, MAX_LOJAS_POR_CONTA, SPLIT_MAX, SPLIT_MIN, donasDasLojas, idDaLoja, lojaDoProduto, pkeyDoArquivo } from '../lib/lojas-prototipo.js';
+import { CAMPOS_DO_DONO, MAX_LOJAS_POR_CONTA, SPLIT_MAX, SPLIT_MIN, donasDasLojas, idDaLoja, lojasDoProduto, pkeyDoArquivo } from '../lib/lojas-prototipo.js';
 import { DOMINIO_TESTE, erro, rota } from '../lib/seguranca.js';
 import { docsVisiveis, limparDocumento } from '../lib/visibilidade.js';
 
@@ -137,10 +137,12 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
       const chaves = [];
       if (atual) chaves.push(pkeyDoArquivo(id, atual)); // o arquivo que já existe é da loja dele
       if (metodo === 'PUT') chaves.push(pkeyDoArquivo(id, dados)); // e o novo também
+      // O produto tem que ser SÓ das lojas dele: um produto que outra loja também tem (ex.: a loja
+      // modelo) não é mexido por ele; os arquivos herdados se escondem na loja dele pelo "h-…" próprio.
       for (const pkey of chaves) {
-        const loja = await lojaDoProduto(repo, pkey);
-        if (loja == null || donas[loja] !== u.id) throw negar(u, 'este arquivo não é da sua loja');
-        if (banidas.has(loja)) throw erro(403, 'loja banida');
+        const lojas = await lojasDoProduto(repo, pkey);
+        if (!lojas.length || lojas.some((l) => donas[l.lojaId] !== u.id)) throw negar(u, 'este arquivo não é só da sua loja');
+        if (lojas.some((l) => banidas.has(l.lojaId))) throw erro(403, 'loja banida');
       }
       return dados;
     }
@@ -249,8 +251,8 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
     if (!entregas.length) return false;
     const donas = await donasDasLojas(repo);
     for (const d of entregas) {
-      const lojaId = await lojaDoProduto(repo, pkeyDoArquivo(d.id, d.dados));
-      if (lojaId != null && donas[lojaId]) return true;
+      const lojas = await lojasDoProduto(repo, pkeyDoArquivo(d.id, d.dados));
+      if (lojas.some((l) => donas[l.lojaId])) return true;
     }
     return false;
   };
@@ -268,13 +270,16 @@ export function rotasPrototipo({ repo, pagamentos, entregasSoPagas = config.entr
     }
     const donas = await donasDasLojas(repo);
     for (const d of entregas) {
-      const pkey = pkeyDoArquivo(d.id, d.dados);
-      const lojaId = await lojaDoProduto(repo, pkey);
-      if (lojaId == null) continue;
-      if (donas[lojaId] === u.id) return true;
-      const loja = await repo.lojaPorPrototipo(lojaId);
-      const produto = loja && await repo.produtoPorPrototipo(loja.id, pkey.slice(1));
-      if (produto && await repo.clientePagouProduto(u.id, produto.id)) return true;
+      for (const { lojaId, produto: p } of await lojasDoProduto(repo, pkeyDoArquivo(d.id, d.dados))) {
+        if (donas[lojaId] === u.id) return true;
+        const loja = await repo.lojaPorPrototipo(lojaId);
+        if (!loja) continue;
+        // o pedido pode ter sido feito antes de o produto ganhar id próprio (srcp = id antigo)
+        for (const pid of new Set([p.id, p.srcp].filter(Boolean).map(String))) {
+          const produto = await repo.produtoPorPrototipo(loja.id, pid);
+          if (produto && await repo.clientePagouProduto(u.id, produto.id)) return true;
+        }
+      }
     }
     return false;
   };
