@@ -170,9 +170,12 @@ test('db: criar e apagar convites, configuração e apagar vendedores exigem don
   assert.equal((await gravar('PUT', 'stores/inv-abc12345', convite)).status, 401);
   assert.equal((await gravar('PUT', 'stores/inv-abc12345', convite, tokens.cliente)).status, 403);
   assert.equal((await gravar('PUT', 'stores/inv-abc12345', convite, tokens.dono)).status, 200);
-  // atualizar um convite que já existe: precisa de login (o servidor marca o uso na criação da conta)
+  // mudar um convite que já existe: também só o dono (o servidor marca o uso na criação da conta).
+  // Antes qualquer login mudava, e um cliente conseguia trocar a senha de um vendedor.
   assert.equal((await gravar('PUT', 'stores/inv-abc12345', { invite: { ...convite.invite, used: true } })).status, 401);
-  assert.equal((await gravar('PUT', 'stores/inv-abc12345', { invite: { ...convite.invite, used: true } }, tokens.vendedor)).status, 200);
+  assert.equal((await gravar('PUT', 'stores/inv-abc12345', { invite: { ...convite.invite, used: true } }, tokens.vendedor)).status, 403);
+  assert.equal((await gravar('PUT', 'stores/inv-abc12345', { invite: { ...convite.invite, used: true } }, tokens.cliente)).status, 403);
+  assert.equal((await gravar('PUT', 'stores/inv-abc12345', { invite: { ...convite.invite, used: true } }, tokens.dono)).status, 200);
   // apagar convite: só o dono
   assert.equal((await gravar('DELETE', 'stores/inv-abc12345')).status, 401);
   assert.equal((await gravar('DELETE', 'stores/inv-abc12345', null, tokens.dono)).status, 200);
