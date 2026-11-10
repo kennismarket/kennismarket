@@ -8,6 +8,9 @@
  * também para o primeiro produto, o que a loja já traz ao ser gerada (genStore).
  * Sem loja modelo, ou com todos os produtos dela já na loja: produto em branco, como antes.
  *
+ * "🎲 Gerar nome": o nome antigo da loja que aparecer no nome e na descrição dos produtos (e na
+ * descrição e no destaque da loja) vira o nome novo.
+ *
  * Carregado pelo site logo depois do script do protótipo (server/lib/pagina-prototipo.js).
  */
 (function () {
@@ -41,6 +44,41 @@
     var p = modelo.prods.find(function (x) { return x && x.id != null && !tem[String(x.id)]; });
     if (!p) return null;
     return trocarNomes(JSON.parse(JSON.stringify(p)), modelo, d);
+  }
+
+  // Troca um nome por outro em textos (string ou lista de traduções).
+  function trocarTexto(v, de, para) {
+    if (typeof v === 'string') return v.split(de).join(para);
+    if (Array.isArray(v)) return v.map(function (x) { return trocarTexto(x, de, para); });
+    return v;
+  }
+
+  // "🎲 Gerar nome": leva o nome novo para os textos dos produtos e da loja.
+  if (typeof A.edname === 'function') {
+    var gerarNome = A.edname;
+    A.edname = function () {
+      var d = edStore();
+      var antes = d && d.n;
+      var r = gerarNome.apply(this, arguments);
+      var depois = d && d.n;
+      if (!antes || antes.length <= 2 || !depois || antes === depois) return r;
+      var mudou = false;
+      var trocar = function (o, campo) {
+        if (!o || o[campo] == null) return;
+        var novo = trocarTexto(o[campo], antes, depois);
+        if (JSON.stringify(novo) !== JSON.stringify(o[campo])) { o[campo] = novo; mudou = true; }
+      };
+      (d.prods || []).forEach(function (p) { trocar(p, 'name'); trocar(p, 'desc'); });
+      trocar(d, 'desc');
+      trocar(d, 'h');
+      if (!mudou) return r;
+      edSync(d);
+      save();
+      var y = window.scrollY;
+      render();
+      window.scrollTo(0, y);
+      return r;
+    };
   }
 
   // Loja gerada: o primeiro produto (e qualquer outro que vier junto) também troca os nomes.
