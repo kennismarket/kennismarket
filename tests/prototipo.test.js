@@ -52,7 +52,7 @@ test('a página do site é o protótipo, só com os ajustes de ligação e o íc
 
 test('se o protótipo mudar, os ajustes que não acharem o trecho aparecem na lista', () => {
   const { faltando } = montarPaginaPrototipo('<html><head></head><body></body></html>');
-  assert.deepEqual(faltando, ['links de convite', 'cotações', 'painel só para o dono', 'editor de lojas só para o dono',
+  assert.deepEqual(faltando, ['abrir no início', 'links de convite', 'cotações', 'painel só para o dono', 'editor de lojas só para o dono',
     'botão do painel só para o dono', 'e-mail cabe no campo de usuário', 'vendedor com conta no Supabase entra pelo link']);
 });
 

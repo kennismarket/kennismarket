@@ -23,7 +23,8 @@ Marketplace brasileiro de produtos digitais e serviços, sem entrega física:
 
 ## Mercado, idioma e moeda
 - Público e vendedores: **Brasil**. Cobrança em **reais (R$)** via **Transfeera**.
-- Interface: o site **abre sempre em holandês** pra qualquer visitante, com tradução opcional para inglês, espanhol e português. Isso é decisão confirmada dos donos, mesmo com o público sendo brasileiro: o seletor de idioma tem que ser fácil de achar.
+- Interface: o site **abre em holandês** pra qualquer visitante **sem login**, com tradução opcional para inglês, espanhol e português. Isso é decisão confirmada dos donos, mesmo com o público sendo brasileiro: o seletor de idioma tem que ser fácil de achar. **Com login salvo no navegador**, o site abre (e atualiza) no idioma que a pessoa estava usando (decisão dos donos, 11/11/2026).
+- **Ao abrir ou atualizar a página** (decisão dos donos, 11/11/2026; ajuste "abrir no início" em `server/lib/pagina-prototipo.js`): sem login, a tela de login; com login salvo, o **catálogo** sem categoria, busca nem filtros (`cat`, `q`, `onlyVer`, `onlyLang`, `sort`, `shown`, `applied` voltam ao padrão). O endereço guardado (`#minhaloja`, `#loja-…`) é ignorado; **só os links de convite** (`#convite-…`) continuam abrindo a tela deles.
 - Moeda interna: **KN Coins** (símbolo K, abreviação KN). **1 KN = 1 euro**: o preço em reais acompanha a cotação diária do euro (Banco Central Europeu), congelada no pedido no momento da compra.
   - KN Coins **só podem ser comprados dentro da loja, no valor exato do pedido**. Não existe compra avulsa de moedas.
   - O cliente só é atendido com o pedido já pago.
