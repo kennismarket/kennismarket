@@ -211,6 +211,15 @@ export const repo = {
   async salvarDadosRecebimento(linha) {
     return checar(await db().from('dados_recebimento').upsert(linha, { onConflict: 'loja_id' }).select().single());
   },
+  // Trocas de chave Pix (migração 0009): o painel do dono mostra as recentes.
+  async registrarTrocaRecebimento(linha) {
+    checar(await db().from('trocas_recebimento').insert(linha));
+  },
+  async listarTrocasRecebimento({ desde, limite = 50 } = {}) {
+    let q = db().from('trocas_recebimento').select('*').order('em', { ascending: false }).limit(limite);
+    if (desde) q = q.gte('em', desde);
+    return checar(await q);
+  },
 
   // ---------- cotações ----------
   async salvarCotacoes(linhas) {

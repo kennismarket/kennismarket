@@ -45,5 +45,5 @@ export function tratarErros(e, _req, res, _next) {
   if (e.type === 'entity.too.large') return res.status(413).json({ erro: 'arquivo grande demais', codigo: 'too_large' });
   const status = e.status || 500;
   if (status === 500 || status === 502) console.error(e); // só erros inesperados vão para o log
-  res.status(status).json({ erro: status === 500 ? 'erro interno' : e.message });
+  res.status(status).json({ erro: status === 500 ? 'erro interno' : e.message, ...(e.codigo && status < 500 ? { codigo: e.codigo } : {}) });
 }

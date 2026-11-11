@@ -2,13 +2,15 @@ import { Router } from 'express';
 import { fileURLToPath } from 'node:url';
 import { atualizarCotacoes } from '../lib/cotacoes.js';
 import { linhaDoRecebedor } from '../lib/recebimento.js';
-import { erro, rota } from '../lib/seguranca.js';
+import { erro, exigirDono, exigirUsuario, rota } from '../lib/seguranca.js';
 import { processarAviso } from './webhook-pagamento.js';
 
 const pagina = fileURLToPath(new URL('../teste/pagamentos.html', import.meta.url));
 
 // Página de teste do fluxo de pagamento: /teste/pagamentos.
 // SÓ EXISTE com o provedor simulado. Com um banco de verdade, tudo aqui responde 404.
+// Segurança (item 5, 11/11/2026): as ações (preparar, simular pagamento, ver débitos) exigem conta
+// de DONO. Antes qualquer visitante marcava qualquer pedido como pago e recebia o PDF de graça.
 export function rotasTeste(deps) {
   const { repo, pagamentos } = deps;
   const pagina404 = (_req, _res, next) => next(pagamentos.provedor === 'simulado' ? undefined : erro(404, 'rota não encontrada'));
@@ -17,7 +19,7 @@ export function rotasTeste(deps) {
   telas.get('/pagamentos', pagina404, (_req, res) => res.sendFile(pagina));
 
   const api = Router();
-  api.use(pagina404);
+  api.use(pagina404, exigirUsuario(repo, pagamentos), exigirDono);
 
   // Cria (ou reaproveita) cliente, vendedora e dono de teste, loja, produto e dados de recebimento.
   api.post('/preparar', rota(async (_req, res) => {

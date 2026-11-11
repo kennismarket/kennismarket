@@ -35,7 +35,7 @@
       ajusteChat: 'Je verzoek staat in de chat. De echte chat met de verkoper komt binnenkort.',
       falha: 'Er ging iets mis. Probeer het opnieuw.',
       reaisT: 'Echte bestellingen (in reais)', carregando: 'Laden…', nenhum: 'Geen open terugbetalingsverzoeken.',
-      decididos: 'Laatst beslist', debitosT: 'Schulden van verkopers', debitosD: 'Het deel van de verkoper in goedgekeurde terugbetalingen. Alleen een notitie: de inning gebeurt buiten de site.', semDebitos: 'Geen schulden.',
+      decididos: 'Laatst beslist', debitosT: 'Schulden van verkopers', debitosD: 'Het deel van de verkoper in goedgekeurde terugbetalingen. Alleen een notitie: de inning gebeurt buiten de site.', semDebitos: 'Geen schulden.', trocasT: 'Pix-sleutels gewijzigd', trocasD: 'Wijzigingen van de afgelopen 30 dagen in waar het geld van de verkoper naartoe gaat. Herkent de verkoper het niet? Blokkeer het account.', semTrocas: 'Geen wijzigingen.',
       valorT: 'Hoeveel terugbetalen?', valorD: 'Het geld gaat terug naar de koper uit de kas van Kennismarket. De verkoper krijgt zijn evenredige deel als schuld genoteerd (alleen een notitie).',
       valorL: 'Bedrag in reais (max. {v})', valorErr: 'Vul een bedrag in tussen R$ 0,01 en {v}.', debitoPrev: 'Schuld van de verkoper: {v}', devolver: '{v} terugbetalen',
       negarT: 'Terugbetaling afwijzen?', negarD: 'De bestelling gaat terug naar de vorige status ({s}).', pago: 'Betaald', parcial: 'gedeeltelijk',
@@ -57,7 +57,7 @@
       ajusteChat: 'Your request is in the chat. The real chat with the seller is coming soon.',
       falha: 'Something went wrong. Please try again.',
       reaisT: 'Real orders (in reais)', carregando: 'Loading…', nenhum: 'No open refund requests.',
-      decididos: 'Recently decided', debitosT: 'Seller debts', debitosD: 'The seller’s share of approved refunds. Just a record: collection happens outside the site.', semDebitos: 'No debts.',
+      decididos: 'Recently decided', debitosT: 'Seller debts', debitosD: 'The seller’s share of approved refunds. Just a record: collection happens outside the site.', semDebitos: 'No debts.', trocasT: 'Pix keys changed', trocasD: 'Changes in the last 30 days to where the seller’s money goes. Seller doesn’t recognize it? Ban the account.', semTrocas: 'No changes.',
       valorT: 'How much to refund?', valorD: 'The money goes back to the buyer from Kennismarket’s funds. The seller’s proportional share is recorded as a debt (just a record).',
       valorL: 'Amount in reais (max. {v})', valorErr: 'Enter an amount between R$ 0.01 and {v}.', debitoPrev: 'Seller’s debt: {v}', devolver: 'Refund {v}',
       negarT: 'Deny the refund?', negarD: 'The order goes back to its previous status ({s}).', pago: 'Paid', parcial: 'partial',
@@ -79,7 +79,7 @@
       ajusteChat: 'Tu pedido está en el chat. El chat real con el vendedor llegará pronto.',
       falha: 'Algo salió mal. Inténtalo de nuevo.',
       reaisT: 'Pedidos reales (en reales)', carregando: 'Cargando…', nenhum: 'No hay solicitudes de reembolso abiertas.',
-      decididos: 'Decididos recientemente', debitosT: 'Deudas de vendedores', debitosD: 'La parte del vendedor en los reembolsos aprobados. Solo un registro: el cobro se hace fuera del sitio.', semDebitos: 'Sin deudas.',
+      decididos: 'Decididos recientemente', debitosT: 'Deudas de vendedores', debitosD: 'La parte del vendedor en los reembolsos aprobados. Solo un registro: el cobro se hace fuera del sitio.', semDebitos: 'Sin deudas.', trocasT: 'Claves Pix cambiadas', trocasD: 'Cambios de los últimos 30 días en adónde va el dinero del vendedor. ¿El vendedor no lo reconoce? Bloquea la cuenta.', semTrocas: 'Sin cambios.',
       valorT: '¿Cuánto devolver?', valorD: 'El dinero vuelve al comprador desde la caja de Kennismarket. La parte proporcional del vendedor queda anotada como deuda (solo un registro).',
       valorL: 'Monto en reales (máx. {v})', valorErr: 'Escribe un monto entre R$ 0,01 y {v}.', debitoPrev: 'Deuda del vendedor: {v}', devolver: 'Devolver {v}',
       negarT: '¿Rechazar el reembolso?', negarD: 'El pedido vuelve a la situación anterior ({s}).', pago: 'Pagado', parcial: 'parcial',
@@ -101,7 +101,7 @@
       ajusteChat: 'O seu pedido está no chat. O chat de verdade com o vendedor chega em breve.',
       falha: 'Algo deu errado. Tente de novo.',
       reaisT: 'Pedidos reais (em reais)', carregando: 'Carregando…', nenhum: 'Nenhum pedido de reembolso em aberto.',
-      decididos: 'Decididos recentemente', debitosT: 'Débitos dos vendedores', debitosD: 'A parte do vendedor nos reembolsos aprovados. É só um registro: a cobrança é feita por fora.', semDebitos: 'Nenhum débito.',
+      decididos: 'Decididos recentemente', debitosT: 'Débitos dos vendedores', debitosD: 'A parte do vendedor nos reembolsos aprovados. É só um registro: a cobrança é feita por fora.', semDebitos: 'Nenhum débito.', trocasT: 'Trocas de chave Pix', trocasD: 'Mudanças dos últimos 30 dias em para onde vai o dinheiro do vendedor. O vendedor não reconhece? Bana a conta.', semTrocas: 'Nenhuma troca.',
       valorT: 'Quanto devolver?', valorD: 'O dinheiro volta ao comprador saindo do caixa do Kennismarket. A parte proporcional do vendedor fica anotada como débito (só um registro).',
       valorL: 'Valor em reais (máx. {v})', valorErr: 'Digite um valor entre R$ 0,01 e {v}.', debitoPrev: 'Débito do vendedor: {v}', devolver: 'Devolver {v}',
       negarT: 'Negar o reembolso?', negarD: 'O pedido volta para a situação anterior ({s}).', pago: 'Pago', parcial: 'parcial',
@@ -345,7 +345,14 @@
             : '<button class="link" data-a="kmdebito" data-id="' + esc(x.id) + '" data-s="aberto">' + t6('reabrir') + '</button>';
           return '<div class="case"><div><b>' + esc(p.loja.nome || '') + '</b><span class="muted">' + tr('caseOrder', { id: idCurto(p.id || x.id), s: esc(p.produto || '') }) + (x.observacao ? ' · “' + esc(x.observacao) + '”' : '') + '</span></div>' +
             '<div class="case-r"><b class="cv neg">' + reais(x.valorCentavos) + '</b><span class="pill ' + (x.situacao === 'aberto' ? 'warn' : 'off') + '">' + esc(t('sit')[x.situacao] || x.situacao) + '</span>' + acoes + '</div></div>';
-        }).join('') : '<p class="muted">' + t('semDebitos') + '</p>') + '</div>';
+        }).join('') : '<p class="muted">' + t('semDebitos') + '</p>') + '</div>' +
+        // segurança: trocas de chave Pix dos últimos 30 dias
+        '<div style="margin-top:18px"><h3 style="margin:0 0 4px">' + t('trocasT') + '</h3><p class="sub">' + t('trocasD') + '</p>' +
+        ((d.trocasPix || []).length ? d.trocasPix.map(function (x) {
+          var quando = new Date(x.em).toLocaleString(lg() === 'pt' ? 'pt-BR' : lg(), { dateStyle: 'short', timeStyle: 'short' });
+          return '<div class="case"><div><b>' + esc(x.loja.nome || '') + '</b><span class="muted">' + esc(x.vendedor || '') + ' · ' + esc(quando) + '</span></div>' +
+            '<div class="case-r"><span class="muted">' + esc(x.antes || '—') + ' → <b>' + esc(x.depois || '') + '</b></span></div></div>';
+        }).join('') : '<p class="muted">' + t('semTrocas') + '</p>') + '</div>';
     }
     return '<div id="km-casos" style="margin:6px 0 18px"><span class="label">' + t('reaisT') + '</span>' + corpo + '</div>';
   }

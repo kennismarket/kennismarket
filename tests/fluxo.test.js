@@ -21,6 +21,11 @@ function popular(r) {
     'tok-outro': { id: 'u-outro', email: 'bia@x.com', nome: 'Bia', papel: 'vendedor' },
     'tok-dono': { id: 'u-dono', email: 'lucas@x.com', nome: 'Lucas', papel: 'dono' },
   };
+  // contas com senha: salvar uma chave Pix nova pede a senha (segurança, item 6)
+  t.contas = {
+    'u-vendedor': { id: 'u-vendedor', email: 'ana@x.com', senha: 'senha-ana', nome: 'Ana', usuario: 'ana', papel: 'vendedor' },
+    'u-outro': { id: 'u-outro', email: 'bia@x.com', senha: 'senha-bia', nome: 'Bia', usuario: 'bia', papel: 'vendedor' },
+  };
   t.lojas = { loja1: { id: 'loja1', vendedor_id: 'u-vendedor', publicada: true, banida: false } };
   t.produtos = { prod1: { id: 'prod1', loja_id: 'loja1', titulo: 'Mentoria', preco_kn: 100, ativo: true } };
   t.cotacoes = [
@@ -58,7 +63,7 @@ const entregar = ({ corpoBruto, cabecalhos }) =>
 const comprar = (forma = 'pix', token = 'tok-cliente') =>
   api('POST', '/api/pedidos', { produtoId: 'prod1', formaPagamento: forma, cpfCnpj: CPF_CLIENTE, moedaExibida: 'usd' }, token);
 const cadastrarVendedora = (corpo = { nome: 'Ana Souza', cpfCnpj: CPF_VENDEDORA, pix: { chave: 'ana@x.com', tipo: 'email' } }) =>
-  api('PUT', '/api/loja/recebimento', corpo, 'tok-vendedor');
+  api('PUT', '/api/loja/recebimento', { senha: 'senha-ana', ...corpo }, 'tok-vendedor');
 const pedidoDe = (id) => repo.tabelas.pedidos[id];
 
 test('loja sem dados de recebimento não vende', async () => {
@@ -220,18 +225,24 @@ test('página de teste: fluxo inteiro só com os endereços dela e os do site', 
   const pg = await api('GET', '/teste/pagamentos');
   assert.equal(pg.s, 200);
   assert.match(pg.texto, /text\/html/);
-  const d = await api('POST', '/api/teste/preparar');
+  // as ações de teste exigem conta de dono (segurança, item 5)
+  assert.equal((await api('POST', '/api/teste/preparar')).s, 401);
+  assert.equal((await api('POST', '/api/teste/preparar', null, 'tok-cliente')).s, 403);
+  const d = await api('POST', '/api/teste/preparar', null, 'tok-dono');
   assert.equal(d.s, 200);
   assert.deepEqual(d.j.formas, ['pix', 'boleto']);
   const { cliente, dono } = d.j.tokens;
   const c = await api('POST', '/api/pedidos', { produtoId: d.j.produtoId, formaPagamento: 'pix', cpfCnpj: CPF_CLIENTE }, cliente);
   assert.equal(c.s, 201);
-  assert.equal((await api('POST', '/api/teste/simular', { pedidoId: c.j.id, tipo: 'pago' })).s, 200);
+  assert.equal((await api('POST', '/api/teste/simular', { pedidoId: c.j.id, tipo: 'pago' })).s, 401);
+  assert.equal((await api('POST', '/api/teste/simular', { pedidoId: c.j.id, tipo: 'pago' }, cliente)).s, 403); // o cliente não se dá o pedido de graça
+  assert.equal(pedidoDe(c.j.id).status, 'aguardando_pagamento');
+  assert.equal((await api('POST', '/api/teste/simular', { pedidoId: c.j.id, tipo: 'pago' }, 'tok-dono')).s, 200);
   assert.equal(pedidoDe(c.j.id).repasse_status, 'repassado');
   const rb = await api('POST', `/api/pedidos/${c.j.id}/reembolso`, { motivo: 'teste' }, cliente);
   const dec = await api('POST', `/api/admin/reembolsos/${rb.j.id}`, { aprovar: true }, dono);
   assert.equal(dec.j.debito.valor_centavos, c.j.divisao.vendedorCentavos);
-  assert.equal((await api('GET', `/api/teste/debitos/${c.j.id}`)).j.length, 1);
+  assert.equal((await api('GET', `/api/teste/debitos/${c.j.id}`, null, 'tok-dono')).j.length, 1);
 });
 
 test('com a Transfeera: página de teste some, contas de teste param, e o que falta da documentação responde 501', async () => {
@@ -254,7 +265,7 @@ test('com a Transfeera: página de teste some, contas de teste param, e o que fa
     assert.deepEqual(saude.j.pagamentos, { provedor: 'transfeera', formas: ['pix', 'boleto'], ambiente: 'sandbox', credenciais: 'NÃO PREENCHIDAS', implementado: false });
 
     // cadastro do vendedor depende da documentação
-    const cad = await api('PUT', '/api/loja/recebimento', { nome: 'Ana', cpfCnpj: CPF_VENDEDORA, pix: { chave: 'a@x.com', tipo: 'email' } }, 'tok-vendedor', { url });
+    const cad = await api('PUT', '/api/loja/recebimento', { nome: 'Ana', cpfCnpj: CPF_VENDEDORA, pix: { chave: 'a@x.com', tipo: 'email' }, senha: 'senha-ana' }, 'tok-vendedor', { url });
     assert.equal(cad.s, 501);
     assert.match(cad.j.erro, /Transfeera.*documentação/);
 

@@ -5,7 +5,7 @@ const bate = (linha, condicoes = {}) => Object.entries(condicoes).every(([campo,
   [].concat(valores).some((v) => (v === null ? linha[campo] == null : linha[campo] === v)));
 
 export function criarRepoMemoria() {
-  const t = { conversas: {}, mensagens: [], entregaArquivos: [], usuarios: {}, lojas: {}, dadosRecebimento: {}, produtos: {}, pedidos: {}, reembolsos: {}, debitos: {}, cotacoes: [], eventos: new Set(), docs: {}, arquivos: {}, contas: {} };
+  const t = { conversas: {}, mensagens: [], entregaArquivos: [], usuarios: {}, lojas: {}, dadosRecebimento: {}, produtos: {}, pedidos: {}, reembolsos: {}, debitos: {}, cotacoes: [], eventos: new Set(), docs: {}, arquivos: {}, contas: {}, trocas: [] };
   const copia = (x) => (x ? structuredClone(x) : null);
   const ultimasPorMoeda = (ate) => {
     const m = {};
@@ -112,6 +112,10 @@ export function criarRepoMemoria() {
     },
     async dadosRecebimento(lojaId) { return copia(t.dadosRecebimento[lojaId]); },
     async salvarDadosRecebimento(linha) { t.dadosRecebimento[linha.loja_id] = { ...linha }; return copia(linha); },
+    async registrarTrocaRecebimento(linha) { t.trocas.push({ id: `tr${t.trocas.length + 1}`, em: new Date().toISOString(), ...linha }); },
+    async listarTrocasRecebimento({ desde, limite = 50 } = {}) {
+      return t.trocas.filter((x) => !desde || x.em >= desde).sort((a, b) => b.em.localeCompare(a.em)).slice(0, limite).map(copia);
+    },
 
     async salvarCotacoes(linhas) {
       for (const l of linhas) {

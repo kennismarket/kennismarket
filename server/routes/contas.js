@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { espelharDepois } from '../lib/espelho-lojas.js';
 import { limitePorIp } from '../lib/limite.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
+import { criarTravaContas } from '../lib/trava-contas.js';
 
 // Login real (Supabase Auth) de clientes, vendedores e donos.
 // O navegador fala com isto por public/js/contas.js, que liga as telas do protótipo aqui.
@@ -27,7 +28,7 @@ const emailInterno = (usuario) => `${usuario}.${crypto.randomBytes(4).toString('
 const emailVisivel = (email) => (email && !email.endsWith('.invalid') ? email : '');
 const falha = (status, codigo, mensagem) => Object.assign(erro(status, mensagem), { codigo });
 
-export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {}, limites = {} }) {
+export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {}, limites = {}, trava = criarTravaContas() }) {
   const r = Router();
   const limite = (opcoes) => (limites.desligados ? (_req, _res, next) => next() : limitePorIp(opcoes));
   const tentativas = limite({ max: 30, janelaMs: 10 * 60 * 1000, mensagem: 'muitas tentativas: espere alguns minutos' });
@@ -73,6 +74,17 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {}, limit
     return s;
   };
 
+  // Trava por conta (força bruta): 10 senhas erradas na mesma conta → 15 minutos de espera.
+  const travada = (chave) => {
+    if (trava.travada(chave)) throw falha(429, 'conta_travada', 'muitas senhas erradas nesta conta: espere 15 minutos');
+  };
+  const comTrava = async (chave, tentar) => {
+    travada(chave);
+    const r = await tentar();
+    if (r) trava.acertou(chave); else trava.errou(chave);
+    return r;
+  };
+
   const validarSenha = (senha) => {
     if (typeof senha !== 'string' || senha.length < 8) throw falha(400, 'senha_curta', 'senha com menos de 8 caracteres');
     if (senha.length > 72) throw falha(400, 'senha_longa', 'senha com mais de 72 caracteres');
@@ -88,7 +100,7 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {}, limit
       const p = USUARIO.test(nomeDeUsuario(login)) ? await repo.perfilPorUsuario(nomeDeUsuario(login)) : null;
       email = p ? await repo.emailDaConta(p.id) : null;
     }
-    const sessao = await entrar(email, senha);
+    const sessao = await comTrava(email || login, () => entrar(email, senha));
     if (!sessao) throw falha(401, 'login_invalido', 'usuário ou senha incorretos');
     const usuario = await repo.usuarioPorToken(sessao.access_token);
     res.json(await resposta(sessao, usuario.id));
@@ -120,7 +132,7 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {}, limit
     const { atual, nova } = req.body || {};
     validarSenha(nova);
     const email = await repo.emailDaConta(req.usuario.id);
-    if (!email || !(await repo.entrarComSenha(email, String(atual ?? '')))) throw falha(401, 'senha_errada', 'senha atual incorreta');
+    if (!email || !(await comTrava(email, () => repo.entrarComSenha(email, String(atual ?? ''))))) throw falha(401, 'senha_errada', 'senha atual incorreta');
     await repo.trocarSenha(req.usuario.id, nova);
     res.json({ ok: true });
   }));
@@ -133,7 +145,7 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {}, limit
     const id = req.usuario.id;
     if (req.usuario.papel === 'dono') throw falha(403, 'conta_dono', 'conta de dono não pode ser excluída por aqui');
     const email = await repo.emailDaConta(id);
-    if (!email || !(await repo.entrarComSenha(email, String(req.body?.senha ?? '')))) throw falha(401, 'senha_errada', 'senha incorreta');
+    if (!email || !(await comTrava(email, () => repo.entrarComSenha(email, String(req.body?.senha ?? ''))))) throw falha(401, 'senha_errada', 'senha incorreta');
     for (const d of await repo.listarDocsPrototipo('sellers')) {
       if (d.dados?.acc?.userId === id) {
         await repo.apagarDocPrototipo('sellers', d.id);
@@ -225,11 +237,13 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {}, limit
     const senha = String(req.body?.senha ?? '');
     const errado = () => falha(401, 'login_invalido', 'usuário ou senha incorretos');
     let acc = (await doc('sellers', `acc-${token}`))?.acc;
-    if (!acc || acc.username !== usuario) throw errado();
+    const chave = (acc?.userId && (await repo.emailDaConta(acc.userId))) || `vendedor:${token}`;
+    travada(chave);
+    if (!acc || acc.username !== usuario) { trava.errou(chave); throw errado(); }
     let id = acc.userId;
     if (!id) {
       const hash = acc.salt && crypto.createHash('sha256').update(`${acc.salt}|${senha}`).digest('hex');
-      if (!acc.hash || hash !== acc.hash) throw errado();
+      if (!acc.hash || hash !== acc.hash) { trava.errou(chave); throw errado(); }
       if (senha.length > 72) throw errado();
       const convite = (await doc('stores', `inv-${token}`))?.invite;
       ({ id } = await criarVendedor(convite, usuario, senha));
@@ -238,7 +252,8 @@ export function rotasContas({ repo, pagamentos, mudouPrototipo = () => {}, limit
       await salvarAcc(token, acc);
     }
     const sessao = await entrar(await repo.emailDaConta(id), senha);
-    if (!sessao) throw errado();
+    if (!sessao) { trava.errou(chave); throw errado(); }
+    trava.acertou(chave);
     res.json({ ...(await resposta(sessao, id)), acc });
   }));
 

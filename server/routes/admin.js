@@ -184,7 +184,14 @@ export function rotasAdmin({ repo, pagamentos, mudouPrototipo = () => {} }) {
     }));
     const caso = (rb) => ({ id: rb.id, conversaId: conversaDoPedido[rb.pedido_id] || null, status: rb.status, motivo: rb.motivo, statusAnterior: rb.status_anterior, criadoEm: rb.criado_em || null,
       decididoEm: rb.decidido_em || null, valorCentavos: rb.valor_centavos ?? null, pedido: pedidoDe(rb.pedido_id) });
+    // Trocas de chave Pix dos últimos 30 dias (segurança: o dono vê se alguém mudou para onde vai o dinheiro).
+    const trocas = await repo.listarTrocasRecebimento({ desde: new Date(Date.now() - 30 * 864e5).toISOString(), limite: 50 });
+    const trocasPix = await Promise.all(trocas.map(async (x) => {
+      const [loja, perfil] = await Promise.all([repo.loja(x.loja_id), x.vendedor_id ? repo.perfil(x.vendedor_id) : null]);
+      return { id: x.id, em: x.em, antes: x.antes, depois: x.depois, loja: { nome: loja?.nome || '', prototipoId: loja?.prototipo_id ?? null }, vendedor: perfil?.usuario || perfil?.nome || '' };
+    }));
     res.json({
+      trocasPix,
       abertos: abertos.map(caso),
       decididos: decididos.map(caso),
       debitos: debitos.map((d) => ({ id: d.id, valorCentavos: d.valor_centavos, situacao: d.situacao, criadoEm: d.criado_em || null, resolvidoEm: d.resolvido_em || null, observacao: d.observacao || null, pedido: pedidoDe(d.pedido_id) })),

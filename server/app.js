@@ -15,7 +15,10 @@ import { rotasTarefas } from './routes/tarefas.js';
 import { rotasTeste } from './routes/teste.js';
 import { rotasPrototipo } from './routes/prototipo.js';
 import { rotasChat } from './routes/chat.js';
+import { criarTravaContas } from './lib/trava-contas.js';
 import { montarPaginaPrototipo } from './lib/pagina-prototipo.js';
+import { cabecalhosSeguranca, CSP_PAGINA_OBSERVAR, rotaRelatorioCsp } from './lib/cabecalhos.js';
+import { config } from './config.js';
 
 const pastaPublica = fileURLToPath(new URL('../public', import.meta.url));
 
@@ -25,10 +28,12 @@ const pastaPublica = fileURLToPath(new URL('../public', import.meta.url));
 export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), paginaPrototipo = montarPaginaPrototipo(), limites = {}, entregasSoPagas } = {}) {
   const app = express();
   const deps = { repo, pagamentos };
+  const trava = criarTravaContas(); // senhas erradas por conta (login, troca de senha, Pix...)
   const teste = rotasTeste(deps);
   const prototipo = rotasPrototipo({ ...deps, ...(entregasSoPagas !== undefined ? { entregasSoPagas } : {}) });
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // o Render fica na frente: o IP do visitante vem no cabeçalho
+  app.use(cabecalhosSeguranca); // proteções do navegador (lib/cabecalhos.js)
   app.locals.pagamentos = pagamentos;
   app.locals.prototipoFaltando = paginaPrototipo.faltando;
   app.locals.mudouPrototipo = prototipo.mudou;
@@ -40,14 +45,15 @@ export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), pa
   app.use(express.json({ limit: '1mb' }));
 
   app.get('/api/vivo', (_req, res) => res.json({ ok: true })); // usado pelo Render para saber se está de pé
+  app.post('/api/csp', rotaRelatorioCsp()); // o navegador conta aqui o que a regra de código bloquearia
   app.use('/api/saude', rotasSaude(deps));
   app.use('/api/config', rotaConfigPublica(entregasSoPagas !== undefined ? { entregasSoPagas } : {}));
   app.use('/api/cotacoes', rotasCotacoes(deps));
   app.use('/api/rates', rotaRatesPrototipo(deps)); // formato que o protótipo espera (RATES_URL)
   app.use('/api/pedidos', rotasPedidos(deps));
-  app.use('/api/loja', rotasLoja(deps));
+  app.use('/api/loja', rotasLoja({ ...deps, trava }));
   app.use('/api/chat', rotasChat({ ...deps, limites }));
-  app.use('/api/contas', rotasContas({ ...deps, mudouPrototipo: prototipo.mudou, limites }));
+  app.use('/api/contas', rotasContas({ ...deps, mudouPrototipo: prototipo.mudou, limites, trava }));
   app.use('/api/admin', rotasAdmin({ ...deps, mudouPrototipo: prototipo.mudou }));
   app.use('/api/tarefas', rotasTarefas(deps));
   app.use('/api/teste', teste.api);
@@ -57,7 +63,8 @@ export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), pa
   app.use('/_blob', prototipo.blob);
 
   // A página do site é o protótipo (a navegação dele é feita no navegador, pelo # do endereço).
-  const enviarPagina = (_req, res) => res.set('Cache-Control', 'no-cache').type('html').send(paginaPrototipo.html);
+  const cspPagina = CSP_PAGINA_OBSERVAR(config.supabase.url);
+  const enviarPagina = (_req, res) => res.set({ 'Cache-Control': 'no-cache', 'Content-Security-Policy-Report-Only': cspPagina }).type('html').send(paginaPrototipo.html);
   app.get(['/', '/index.html'], enviarPagina);
   app.use(express.static(pastaPublica));
   app.get('*', enviarPagina);

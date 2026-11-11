@@ -258,7 +258,7 @@ test('pedido: a divisão usa a porcentagem da loja, congelada no pedido', async 
   assert.equal(await gravar('PUT', 'stores/s6400', lojaCompleta(6400, { split: 70 }), dono), 200);
   // a vendedora diz como recebe (a loja dela agora existe nas tabelas)
   const rec = await fetch(`${base}/api/loja/recebimento`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${nina.t}` },
-    body: JSON.stringify({ nome: 'Nina Lima', cpfCnpj: '529.982.247-25', pix: { chave: 'nina@ex.com', tipo: 'email' } }) });
+    body: JSON.stringify({ nome: 'Nina Lima', cpfCnpj: '529.982.247-25', pix: { chave: 'nina@ex.com', tipo: 'email' }, senha: 'segredo123' }) });
   assert.equal(rec.status, 200);
   await repo.salvarCotacoes([{ data: '2026-10-30', moeda: 'BRL', taxa: 6, fonte: 'bce' }]);
   const produto = produtosReais(6400).find((p) => p.prototipo_id === 'a6400'); // 100 KN
@@ -289,7 +289,7 @@ test('checkout: /api/pedidos/preco diz se a compra é de verdade e quanto custa'
   assert.equal((await preco(6600, 'a6600')).j.motivo, 'sem_vendedor');
   assert.equal((await preco(6500, 'nao-existe')).j.motivo, 'indisponivel');
   await fetch(`${base}/api/loja/recebimento`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${olga.t}` },
-    body: JSON.stringify({ nome: 'Olga Lima', cpfCnpj: '529.982.247-25', pix: { chave: 'olga@ex.com', tipo: 'email' } }) });
+    body: JSON.stringify({ nome: 'Olga Lima', cpfCnpj: '529.982.247-25', pix: { chave: 'olga@ex.com', tipo: 'email' }, senha: 'segredo123' }) });
   assert.equal((await preco(6500, 'a6500', olga.t)).j.motivo, 'propria_loja');
   const ok = (await preco(6500, 'a6500')).j;
   assert.equal(ok.pode, true);

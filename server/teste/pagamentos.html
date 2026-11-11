@@ -94,9 +94,18 @@
     aguardando: 'aguardando o pagamento', processando: 'processando', repassado: 'repassado à vendedora', falhou: 'falhou',
   };
 
+  // As ações de teste (/api/teste/...) exigem conta de dono: usa o login do dono feito no site.
+  function tokenDoDono() {
+    try { return (JSON.parse(localStorage.getItem('km-sessao') || 'null') || {}).access || null; } catch (e) { return null; }
+  }
   async function chamar(metodo, url, corpo, papel) {
     const headers = { 'Content-Type': 'application/json' };
     if (papel) headers.authorization = `Bearer ${estado.tokens[papel]}`;
+    else if (url.startsWith('/api/teste/')) {
+      const t = tokenDoDono();
+      if (!t) throw new Error('entre no site com a conta de dono e abra esta página de novo');
+      headers.authorization = `Bearer ${t}`;
+    }
     const r = await fetch(url, { method: metodo, headers, body: corpo ? JSON.stringify(corpo) : undefined });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.erro || `HTTP ${r.status}`);
