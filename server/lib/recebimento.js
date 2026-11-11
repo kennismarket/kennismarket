@@ -47,3 +47,22 @@ export function linhaDoRecebedor(lojaId, r, provedor, resposta) {
     atualizado_em: new Date().toISOString(),
   };
 }
+
+// "Impressão digital" de para onde vai o dinheiro (documento + chave Pix + conta). Nome não entra.
+export function destinoDoRecebedor(r) {
+  return JSON.stringify([soDigitos(r?.documento || ''), String(r?.pix?.tipo || ''), String(r?.pix?.chave || '').trim().toLowerCase(),
+    r?.banco?.codigo || '', r?.banco?.agencia || '', r?.banco?.conta || '']);
+}
+
+// Resumo para o painel do dono, sem a chave inteira: "pix e-mail ••••.com", "conta 341 ••••5-6".
+export function resumoDoRecebedor(r) {
+  if (!r) return null;
+  const fim = (v) => `••••${String(v || '').slice(-4)}`;
+  const email = (v) => { const [a, d] = String(v).split('@'); return `${a.slice(0, 2)}•••@${d}`; };
+  if (r.pix?.chave) {
+    const k = String(r.pix.chave);
+    return `pix ${r.pix.tipo || ''} ${k.includes('@') ? email(k) : fim(k)}`.replace(/\s+/g, ' ');
+  }
+  if (r.banco?.conta) return `conta ${r.banco.codigo || ''} ${fim(r.banco.conta)}`.replace(/\s+/g, ' ');
+  return '—';
+}

@@ -247,5 +247,24 @@ do $$ begin
   exception when unique_violation then null; end;
 end $$;
 
+-- 0009: o navegador não grava em tabela nenhuma (nem mensagens); ler continua como antes
+do $$ declare t text; begin
+  for t in select tablename from pg_tables where schemaname = 'public' loop
+    assert not has_table_privilege('authenticated', 'public.' || t, 'INSERT'), 'authenticated grava em ' || t;
+    assert not has_table_privilege('authenticated', 'public.' || t, 'UPDATE'), 'authenticated muda ' || t;
+    assert not has_table_privilege('authenticated', 'public.' || t, 'DELETE'), 'authenticated apaga ' || t;
+    assert not has_table_privilege('anon', 'public.' || t, 'INSERT'), 'anon grava em ' || t;
+  end loop;
+  assert has_table_privilege('authenticated', 'public.mensagens', 'SELECT'), 'ler mensagens continua';
+  assert has_table_privilege('anon', 'public.lojas', 'SELECT'), 'ler lojas continua';
+  assert not exists (select 1 from pg_policies where tablename = 'mensagens' and cmd = 'INSERT'), 'sem regra de gravar mensagens';
+  assert not has_table_privilege('authenticated', 'public.trocas_recebimento', 'SELECT'), 'trocas de Pix: só o servidor';
+end $$;
+do $$ begin
+  insert into trocas_recebimento (loja_id, vendedor_id, antes, depois)
+    values ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000000c', 'pix e-mail ••••.com', 'pix cpf ••••1234');
+  assert (select count(*) from trocas_recebimento) = 1;
+end $$;
+
 rollback;
 \echo 'BANCO: todas as verificações passaram'

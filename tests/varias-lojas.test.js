@@ -53,7 +53,7 @@ test('uma conta cria até 10 lojas; a 11ª é recusada; todas ficam dela nas tab
 
 test('"Como você recebe" é por loja; a loja nova sugere os dados de outra loja da conta', async () => {
   const pix = { nome: 'Ana Souza', cpfCnpj: CPF, pix: { tipo: 'email', chave: 'ana@ex.com' } };
-  assert.equal((await req('PUT', '/api/loja/recebimento?loja=9001', pix, ana.t)).s, 200);
+  assert.equal((await req('PUT', '/api/loja/recebimento?loja=9001', { ...pix, senha: 'segredo123' }, ana.t)).s, 200);
   assert.equal((await req('GET', '/api/loja/recebimento?loja=9001', null, ana.t)).j.situacao, 'pronto');
   const nova = (await req('GET', '/api/loja/recebimento?loja=9002', null, ana.t)).j;
   assert.equal(nova.situacao, 'nao_cadastrado');

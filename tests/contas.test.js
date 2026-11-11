@@ -254,8 +254,9 @@ test('limite de tentativas de login por IP (fora dos testes, sempre ligado)', as
   const srv = criarApp({ repo: criarRepoMemoria() }).listen(0);
   try {
     const url = `http://localhost:${srv.address().port}/api/contas/entrar`;
-    const tentar = () => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: 'x_x', senha: 'y' }) });
-    for (let i = 0; i < 30; i++) assert.equal((await tentar()).status, 401);
-    assert.equal((await tentar()).status, 429);
+    // contas diferentes a cada tentativa: aqui o que vale é o limite por endereço (a trava por conta tem teste próprio)
+    const tentar = (i) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: `x_${i}`, senha: 'y' }) });
+    for (let i = 0; i < 30; i++) assert.equal((await tentar(i)).status, 401);
+    assert.equal((await tentar(99)).status, 429);
   } finally { srv.close(); }
 });

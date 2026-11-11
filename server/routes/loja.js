@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { arquivosPorPedido, concluirEntreguesVencidos, pedidoParaTela, STATUS_DEPOIS_DE_PAGO, ultimoReembolsoPorPedido } from '../lib/pedidos.js';
-import { linhaDoRecebedor, recebedorDoCadastro, recebedorDaLinha } from '../lib/recebimento.js';
+import { destinoDoRecebedor, linhaDoRecebedor, recebedorDoCadastro, recebedorDaLinha, resumoDoRecebedor } from '../lib/recebimento.js';
+import { criarTravaContas } from '../lib/trava-contas.js';
 import { erro, exigirUsuario, rota } from '../lib/seguranca.js';
 import { resumoFaturamento } from '../lib/vendas.js';
 import { MAX_LOJAS_POR_CONTA, idDaLoja, lojasDaConta } from '../lib/lojas-prototipo.js';
 
 // Área do vendedor sobre as próprias lojas (até 10 por conta). As rotas de uma loja recebem
 // qual loja em ?loja=<id da loja no protótipo>; sem isso, vale a primeira loja da conta.
-export function rotasLoja({ repo, pagamentos }) {
+export function rotasLoja({ repo, pagamentos, trava = criarTravaContas() }) {
   const r = Router();
   r.use(exigirUsuario(repo, pagamentos));
 
@@ -37,12 +38,40 @@ export function rotasLoja({ repo, pagamentos }) {
   // Como o vendedor recebe. Não cria conta em banco nenhum: só os dados para o split.
   // ⚠️ Campos a ajustar quando chegar a documentação do banco de pagamento.
   // Corpo: { nome, cpfCnpj, pix: { chave, tipo } }  ou  { nome, cpfCnpj, banco: { codigo, agencia, conta, tipoConta } }
+  //
+  // Segurança (item 6, 11/11/2026): para onde vai o dinheiro mudou (documento, chave Pix ou conta)?
+  // Então pede a senha da conta (com a trava de senhas erradas) e registra a troca, que aparece no
+  // painel do dono. Confirmar os mesmos dados (ou os de outra loja da conta) não pede senha.
   r.put('/recebimento', rota(async (req, res) => {
     const loja = await minhaLoja(req);
     const recebedor = recebedorDoCadastro(req.body);
+    const atual = await repo.dadosRecebimento(loja.id);
+    const outras = [];
+    for (const l of await repo.lojasDoVendedor(req.usuario.id)) {
+      const d = l.id !== loja.id && await repo.dadosRecebimento(l.id);
+      if (d) outras.push(d);
+    }
+    const conhecidos = [atual, ...outras].filter(Boolean).map((l) => destinoDoRecebedor(recebedorDaLinha(l)));
+    const novoDestino = !conhecidos.includes(destinoDoRecebedor(recebedor));
+    if (novoDestino) {
+      const email = await repo.emailDaConta(req.usuario.id);
+      if (trava.travada(email)) throw Object.assign(erro(429, 'muitas senhas erradas nesta conta: espere 15 minutos'), { codigo: 'conta_travada' });
+      const senha = String(req.body?.senha ?? '');
+      if (!senha) throw Object.assign(erro(400, 'digite sua senha para confirmar'), { codigo: 'senha_obrigatoria' });
+      if (!email || !(await repo.entrarComSenha(email, senha))) {
+        trava.errou(email);
+        throw Object.assign(erro(401, 'senha incorreta'), { codigo: 'senha_errada' });
+      }
+      trava.acertou(email);
+    }
     const resposta = await pagamentos.cadastrarRecebedor(recebedor); // valida e registra no banco, se o banco pedir
     const linha = await repo.salvarDadosRecebimento(linhaDoRecebedor(loja.id, recebedor, pagamentos.provedor, resposta));
     if (resposta.situacao === 'recusado') throw erro(400, `o banco recusou os dados de recebimento: ${resposta.motivo || 'sem motivo informado'}`);
+    // a primeira chave de uma conta nova não é "troca"; mudar uma que já existia (ou usar outra) é
+    if (novoDestino && conhecidos.length) {
+      const antes = atual ? recebedorDaLinha(atual) : recebedorDaLinha(outras[0]);
+      await repo.registrarTrocaRecebimento({ loja_id: loja.id, vendedor_id: req.usuario.id, antes: resumoDoRecebedor(antes), depois: resumoDoRecebedor(recebedor) });
+    }
     res.json({ situacao: linha.situacao, recebedor: recebedorDaLinha(linha) });
   }));
 

@@ -24,25 +24,25 @@
       pix: 'Pix', boleto: 'Boleto', cartao: 'Kaart', embreve: 'binnenkort', genPix: 'Pix aanmaken', genBoleto: 'Boleto aanmaken', protecao: 'Beschermd door support: komt de levering niet overeen met de afspraak, dan beoordeelt support het en betaalt Kennismarket je geld terug.',
       cotacao: 'Koers van {d}: 1 KN = {v}', aguardando: 'Wachten op betaling…', pago: 'Betaling ontvangen!', simular: 'Betaling simuleren (test)', cartaoEmBreve: 'Betalen met kaart komt binnenkort.', demoAviso: '<b>Demo:</b> er wordt niets afgeschreven. Op de echte site wordt de betaling automatisch bevestigd.', pixD: 'Kopieer de code en betaal in je bank-app. Deze pagina ziet de betaling vanzelf.',
       boletoD: 'Betaal de boleto bij je bank. Het kan tot 3 werkdagen duren.', abrirBoleto: 'Boleto openen', umPorVez: 'Koop voorlopig één product per keer (zonder vertaling).', falha: 'Er ging iets mis. Probeer het opnieuw.',
-      recT: 'Hoe je betaald wordt', recD: 'Je deel van elke verkoop gaat direct naar deze Pix-sleutel. Zonder dit kan je winkel niet echt verkopen.', recNome: 'Volledige naam of bedrijfsnaam', recDoc: 'CPF of CNPJ', recTipo: 'Type Pix-sleutel', recChave: 'Pix-sleutel', recSalvar: 'Opslaan', recOk: 'Gegevens opgeslagen. Je winkel kan nu verkopen.', recPronto: 'Je ontvangt via Pix', recAlterar: 'Wijzigen', recSugestao: 'Overgenomen van je andere winkel: controleer en sla op.', recErr: 'Controleer de gegevens.',
+      recT: 'Hoe je betaald wordt', recD: 'Je deel van elke verkoop gaat direct naar deze Pix-sleutel. Zonder dit kan je winkel niet echt verkopen.', recNome: 'Volledige naam of bedrijfsnaam', recDoc: 'CPF of CNPJ', recTipo: 'Type Pix-sleutel', recChave: 'Pix-sleutel', recSalvar: 'Opslaan', recOk: 'Gegevens opgeslagen. Je winkel kan nu verkopen.', recPronto: 'Je ontvangt via Pix', recAlterar: 'Wijzigen', recSugestao: 'Overgenomen van je andere winkel: controleer en sla op.', recErr: 'Controleer de gegevens.', recSenha: 'Je wachtwoord', recSenhaD: 'Nodig als je de Pix-sleutel of het CPF/CNPJ wijzigt.', recSenhaFalta: 'Vul je wachtwoord in om te bevestigen.', recSenhaErrada: 'Wachtwoord onjuist.', travada: 'Te veel verkeerde wachtwoorden voor dit account. Wacht 15 minuten.',
       tipos: { cpf: 'CPF', cnpj: 'CNPJ', email: 'E-mail', telefone: 'Telefoon', aleatoria: 'Willekeurige sleutel' } },
     en: { t: 'Pay for your order', d: 'Pay with Pix or boleto. The seller starts after payment.', doc: 'Payer’s CPF or CNPJ', docErr: 'Enter a valid CPF or CNPJ.',
       pix: 'Pix', boleto: 'Boleto', cartao: 'Card', embreve: 'coming soon', genPix: 'Create Pix', genBoleto: 'Create boleto', protecao: 'Protected by support: if the delivery doesn’t match what was agreed, support reviews it and Kennismarket refunds your money.',
       cotacao: 'Rate of {d}: 1 KN = {v}', aguardando: 'Waiting for payment…', pago: 'Payment received!', simular: 'Simulate payment (test)', cartaoEmBreve: 'Card payment is coming soon.', demoAviso: '<b>Demo:</b> nothing is charged. On the real site, payment is confirmed automatically.', pixD: 'Copy the code and pay in your bank app. This page notices the payment by itself.',
       boletoD: 'Pay the boleto at your bank. It can take up to 3 business days.', abrirBoleto: 'Open boleto', umPorVez: 'For now, buy one product at a time (without translation).', falha: 'Something went wrong. Please try again.',
-      recT: 'How you get paid', recD: 'Your share of each sale goes straight to this Pix key. Without it, your store can’t really sell.', recNome: 'Full name or company name', recDoc: 'CPF or CNPJ', recTipo: 'Pix key type', recChave: 'Pix key', recSalvar: 'Save', recOk: 'Details saved. Your store can now sell.', recPronto: 'You get paid by Pix', recAlterar: 'Change', recSugestao: 'Copied from your other store: check and save.', recErr: 'Check the details.',
+      recT: 'How you get paid', recD: 'Your share of each sale goes straight to this Pix key. Without it, your store can’t really sell.', recNome: 'Full name or company name', recDoc: 'CPF or CNPJ', recTipo: 'Pix key type', recChave: 'Pix key', recSalvar: 'Save', recOk: 'Details saved. Your store can now sell.', recPronto: 'You get paid by Pix', recAlterar: 'Change', recSugestao: 'Copied from your other store: check and save.', recErr: 'Check the details.', recSenha: 'Your password', recSenhaD: 'Needed when you change the Pix key or the CPF/CNPJ.', recSenhaFalta: 'Enter your password to confirm.', recSenhaErrada: 'Wrong password.', travada: 'Too many wrong passwords for this account. Wait 15 minutes.',
       tipos: { cpf: 'CPF', cnpj: 'CNPJ', email: 'Email', telefone: 'Phone', aleatoria: 'Random key' } },
     es: { t: 'Pagar pedido', d: 'Paga con Pix o boleto. El vendedor empieza después del pago.', doc: 'CPF o CNPJ de quien paga', docErr: 'Escribe un CPF o CNPJ válido.',
       pix: 'Pix', boleto: 'Boleto', cartao: 'Tarjeta', embreve: 'pronto', genPix: 'Generar Pix', genBoleto: 'Generar boleto', protecao: 'Protegido por soporte: si la entrega no coincide con lo acordado, soporte lo analiza y Kennismarket te devuelve el dinero.',
       cotacao: 'Cotización del {d}: 1 KN = {v}', aguardando: 'Esperando el pago…', pago: '¡Pago recibido!', simular: 'Simular pago (prueba)', cartaoEmBreve: 'El pago con tarjeta llegará pronto.', demoAviso: '<b>Demo:</b> no se cobra nada. En el sitio real, el pago se confirma automáticamente.', pixD: 'Copia el código y paga en la app de tu banco. Esta página detecta el pago sola.',
       boletoD: 'Paga el boleto en tu banco. Puede tardar hasta 3 días hábiles.', abrirBoleto: 'Abrir boleto', umPorVez: 'Por ahora, compra un producto a la vez (sin traducción).', falha: 'Algo salió mal. Inténtalo de nuevo.',
-      recT: 'Cómo cobras', recD: 'Tu parte de cada venta va directo a esta clave Pix. Sin esto, tu tienda no puede vender de verdad.', recNome: 'Nombre completo o razón social', recDoc: 'CPF o CNPJ', recTipo: 'Tipo de clave Pix', recChave: 'Clave Pix', recSalvar: 'Guardar', recOk: 'Datos guardados. Tu tienda ya puede vender.', recPronto: 'Cobras por Pix', recAlterar: 'Cambiar', recSugestao: 'Copiado de tu otra tienda: revisa y guarda.', recErr: 'Revisa los datos.',
+      recT: 'Cómo cobras', recD: 'Tu parte de cada venta va directo a esta clave Pix. Sin esto, tu tienda no puede vender de verdad.', recNome: 'Nombre completo o razón social', recDoc: 'CPF o CNPJ', recTipo: 'Tipo de clave Pix', recChave: 'Clave Pix', recSalvar: 'Guardar', recOk: 'Datos guardados. Tu tienda ya puede vender.', recPronto: 'Cobras por Pix', recAlterar: 'Cambiar', recSugestao: 'Copiado de tu otra tienda: revisa y guarda.', recErr: 'Revisa los datos.', recSenha: 'Tu contraseña', recSenhaD: 'Necesaria si cambias la clave Pix o el CPF/CNPJ.', recSenhaFalta: 'Escribe tu contraseña para confirmar.', recSenhaErrada: 'Contraseña incorrecta.', travada: 'Demasiadas contraseñas incorrectas en esta cuenta. Espera 15 minutos.',
       tipos: { cpf: 'CPF', cnpj: 'CNPJ', email: 'Correo', telefone: 'Teléfono', aleatoria: 'Clave aleatoria' } },
     pt: { t: 'Pagar pedido', d: 'Pague com Pix ou boleto. O vendedor começa depois do pagamento.', doc: 'CPF ou CNPJ de quem paga', docErr: 'Digite um CPF ou CNPJ válido.',
       pix: 'Pix', boleto: 'Boleto', cartao: 'Cartão', embreve: 'em breve', genPix: 'Gerar Pix', genBoleto: 'Gerar boleto', protecao: 'Protegido pelo suporte: se a entrega não bater com o combinado, o suporte analisa e o Kennismarket devolve o seu dinheiro.',
       cotacao: 'Cotação de {d}: 1 KN = {v}', aguardando: 'Aguardando o pagamento…', pago: 'Pagamento recebido!', simular: 'Simular pagamento (teste)', cartaoEmBreve: 'O pagamento com cartão chega em breve.', demoAviso: '<b>Demonstração:</b> nada é cobrado. No site real, o pagamento é confirmado automaticamente.', pixD: 'Copie o código e pague no app do seu banco. Esta página percebe o pagamento sozinha.',
       boletoD: 'Pague o boleto no seu banco. Pode levar até 3 dias úteis.', abrirBoleto: 'Abrir boleto', umPorVez: 'Por enquanto, compre um produto por vez (sem tradução).', falha: 'Algo deu errado. Tente de novo.',
-      recT: 'Como você recebe', recD: 'A sua parte de cada venda vai direto para esta chave Pix. Sem isso, sua loja não vende de verdade.', recNome: 'Nome completo ou razão social', recDoc: 'CPF ou CNPJ', recTipo: 'Tipo de chave Pix', recChave: 'Chave Pix', recSalvar: 'Salvar', recOk: 'Dados salvos. Sua loja já pode vender.', recPronto: 'Você recebe por Pix', recAlterar: 'Alterar', recSugestao: 'Copiamos os dados da sua outra loja: confira e salve.', recErr: 'Confira os dados.',
+      recT: 'Como você recebe', recD: 'A sua parte de cada venda vai direto para esta chave Pix. Sem isso, sua loja não vende de verdade.', recNome: 'Nome completo ou razão social', recDoc: 'CPF ou CNPJ', recTipo: 'Tipo de chave Pix', recChave: 'Chave Pix', recSalvar: 'Salvar', recOk: 'Dados salvos. Sua loja já pode vender.', recPronto: 'Você recebe por Pix', recAlterar: 'Alterar', recSugestao: 'Copiamos os dados da sua outra loja: confira e salve.', recErr: 'Confira os dados.', recSenha: 'Sua senha', recSenhaD: 'Necessária se você mudar a chave Pix ou o CPF/CNPJ.', recSenhaFalta: 'Digite sua senha para confirmar.', recSenhaErrada: 'Senha incorreta.', travada: 'Muitas senhas erradas nesta conta. Espere 15 minutos.',
       tipos: { cpf: 'CPF', cnpj: 'CNPJ', email: 'E-mail', telefone: 'Celular', aleatoria: 'Chave aleatória' } },
   };
   function t(k, vars) {
@@ -64,7 +64,7 @@
       body: corpo ? JSON.stringify(corpo) : undefined,
     });
     var j = await r.json().catch(function () { return {}; });
-    if (!r.ok) throw Object.assign(new Error(j.erro || 'erro'), { status: r.status });
+    if (!r.ok) throw Object.assign(new Error(j.erro || 'erro'), { status: r.status, codigo: j.codigo });
     return j;
   }
 
@@ -125,7 +125,8 @@
       o.querySelector('.sheet').innerHTML = '<h2>' + (forma === 'boleto' ? t('boleto') : tr('pixT')) + '</h2>' + corpo +
         '<p class="muted" id="ck-st" style="text-align:center;margin:4px 0">' + t('aguardando') + '</p>' +
         (preco.demo ? '<div class="callout warn">' + icon('alert', 18) + '<span>' + t('demoAviso') + '</span></div>' : '') +
-        (preco.simulado ? '<button class="btn safe block" id="ck-sim">' + t('simular') + '</button>' : '') +
+        // "Simular pagamento": na demonstração (tudo no navegador) ou para o dono (o servidor exige dono)
+        (preco.simulado && (preco.demo || window.KM_DONO) ? '<button class="btn safe block" id="ck-sim">' + t('simular') + '</button>' : '') +
         '<button class="btn block" data-a="close">' + tr('close') + '</button>';
       o.querySelector('#ck-cp').onclick = function () {
         try { navigator.clipboard.writeText(o.querySelector('#ck-cod').value).then(function () { toast(tr('copied')); }, function () {}); } catch (e) {}
@@ -263,6 +264,8 @@
       '<div class="field"><label for="rec-tipo">' + t('recTipo') + '</label><select id="rec-tipo" class="select">' +
         Object.keys(tipos).map(function (k) { return '<option value="' + k + '"' + (pix.tipo === k ? ' selected' : '') + '>' + tipos[k] + '</option>'; }).join('') + '</select></div>' +
       '<div class="field"><label for="rec-chave">' + t('recChave') + '</label><input id="rec-chave" value="' + esc(pix.chave || '') + '"></div>' +
+      // segurança: mudar para onde vai o dinheiro pede a senha da conta (só contas reais)
+      (contaReal() ? '<div class="field"><label for="rec-senha">' + t('recSenha') + '</label><input id="rec-senha" type="password" autocomplete="current-password"><small class="muted">' + t('recSenhaD') + '</small></div>' : '') +
       '<p class="err" id="rec-err"></p><button class="btn primary" type="submit">' + t('recSalvar') + '</button></form></section>';
   }
   document.addEventListener('click', function (e) {
@@ -283,11 +286,13 @@
         S.kmRecDemo = Object.assign({}, S.kmRecDemo || {}); S.kmRecDemo[S.myStore.id] = { nome: dados.nome, documento: doc, pix: dados.pix }; save();
         rec.estado = null;
       } else {
-        rec.estado = await api('PUT', '/api/loja/recebimento?loja=' + encodeURIComponent(S.myStore.id), dados);
+        var campoSenha = document.getElementById('rec-senha');
+        rec.estado = await api('PUT', '/api/loja/recebimento?loja=' + encodeURIComponent(S.myStore.id), Object.assign({}, dados, { senha: campoSenha ? campoSenha.value : '' }));
       }
       rec.editando = false; var y = scrollY; render(); scrollTo(0, y); toast(t('recOk'));
     } catch (x) {
-      err.textContent = x.status === 400 ? (x.message || t('recErr')) : t('falha');
+      err.textContent = x.codigo === 'senha_obrigatoria' ? t('recSenhaFalta') : x.codigo === 'senha_errada' ? t('recSenhaErrada')
+        : x.codigo === 'conta_travada' ? t('travada') : x.status === 400 ? (x.message || t('recErr')) : t('falha');
       b.disabled = false;
     }
   }, true);

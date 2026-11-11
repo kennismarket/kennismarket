@@ -97,8 +97,8 @@ test('pagou: as mensagens automáticas entram na conversa (uma vez só)', async 
   const c = await api('POST', '/api/pedidos', { produtoId: 'p1', formaPagamento: 'pix' }, 'tok-cli');
   assert.equal(c.s, 201);
   pedidoId = c.j.id;
-  assert.equal((await api('POST', '/api/teste/simular', { pedidoId, tipo: 'pago' })).s, 200);
-  await api('POST', '/api/teste/simular', { pedidoId, tipo: 'pago' }); // aviso repetido
+  assert.equal((await api('POST', '/api/teste/simular', { pedidoId, tipo: 'pago' }, 'tok-dono')).s, 200);
+  await api('POST', '/api/teste/simular', { pedidoId, tipo: 'pago' }, 'tok-dono'); // aviso repetido
   const msgs = (await api('GET', '/api/chat/loja/501', null, 'tok-cli')).j.mensagens.filter((m) => m.chave);
   assert.deepEqual(msgs.map((m) => [m.de, m.chave]), [['sistema', 'm_prodBought'], ['vendedor', 'm_started']]);
   assert.deepEqual(msgs[0].params, { produto: 'a1', titulo: 'Análise', n: 50, pedido: pedidoId });

@@ -8,6 +8,9 @@ do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon; end if;
   if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role bypassrls; end if;
 end $$;
+-- Como no Supabase de verdade: tabelas novas do esquema public nascem com tudo liberado para o
+-- navegador (anon/authenticated), e só o RLS segura. As migrações precisam fechar o que for preciso.
+alter default privileges in schema public grant all on tables to anon, authenticated;
 
 -- Storage do Supabase (só a tabela de pastas, que as migrações usam).
 create schema if not exists storage;
