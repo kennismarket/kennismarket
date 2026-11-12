@@ -14,7 +14,7 @@ function estatisticas() {
   return { abertas: soma('connected'), emUso: soma('running'), naFila: soma('pending') };
 }
 
-export function rotasSaude({ pagamentos }) {
+export function rotasSaude({ pagamentos, repo }) {
   const r = Router();
   r.get('/', async (_req, res) => {
     const { url, publishableKey, secretKey } = config.supabase;
@@ -35,6 +35,8 @@ export function rotasSaude({ pagamentos }) {
       tarefas: { token: config.tarefasToken ? 'preenchido' : 'NÃO PREENCHIDO' },
       // conexões HTTP com o Supabase (lib/conexoes.js): limite, tempo para fechar as paradas e uso agora
       conexoesSupabase: { maximo: conexoes.limites.maxConexoes, fechaParadaEmMs: conexoes.limites.ociosaMs, ...estatisticas() },
+      // memória curta na frente do banco (lib/cache-repo.js): logins guardados e listas guardadas
+      memoria: repo?.memoria ? repo.memoria() : null,
       noArDesde: INICIO,
       pagamentos: pagamentos.situacao(),
       avisos,

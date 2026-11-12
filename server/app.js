@@ -1,6 +1,7 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { repo as repoPadrao } from './lib/repo.js';
+import { comCache } from './lib/cache-repo.js';
 import { tratarErros } from './lib/seguranca.js';
 import { criarPagamentos } from './pagamentos/index.js';
 import { rotasSaude } from './routes/saude.js';
@@ -27,6 +28,7 @@ const pastaPublica = fileURLToPath(new URL('../public', import.meta.url));
 // entregasSoPagas: os testes ligam a trava dos arquivos de entrega (no site, vem de ENTREGAS_SO_PAGAS).
 export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), paginaPrototipo = montarPaginaPrototipo(), limites = {}, entregasSoPagas } = {}) {
   const app = express();
+  repo = comCache(repo); // memória curta na frente do banco (não faz nada se já tiver)
   const deps = { repo, pagamentos };
   const trava = criarTravaContas(); // senhas erradas por conta (login, troca de senha, Pix...)
   const teste = rotasTeste(deps);

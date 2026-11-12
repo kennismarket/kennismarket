@@ -4,6 +4,7 @@
 import crypto from 'node:crypto';
 import { config } from '../config.js';
 import { clienteDeLogin, supabaseAdmin } from './supabase.js';
+import { comCache } from './cache-repo.js';
 
 const PASTA = 'prototipo'; // pasta do Storage com os arquivos do protótipo
 // Situações de pedido em que o cliente já pagou (e pode receber os arquivos de entrega).
@@ -44,7 +45,8 @@ async function todosOsLogins() {
   return logins;
 }
 
-export const repo = {
+// O banco de verdade. O site usa "repo" (no fim do arquivo), que tem a memória curta na frente.
+const repoBanco = {
   async usuarioPorToken(token) {
     const { data, error } = await db().auth.getUser(token);
     if (error || !data?.user) return null;
@@ -437,3 +439,6 @@ export const repo = {
     return { tokens, lojaId: loja.id, produtoId: produto.id };
   },
 };
+
+// Memória curta na frente do banco (lib/cache-repo.js): menos pedidos ao Supabase.
+export const repo = comCache(repoBanco);
