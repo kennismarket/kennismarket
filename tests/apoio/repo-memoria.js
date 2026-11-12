@@ -1,10 +1,16 @@
 // Banco em memória com as mesmas funções de server/lib/repo.js, para os testes.
 import crypto from 'node:crypto';
+import { comCache } from '../../server/lib/cache-repo.js';
 
 const bate = (linha, condicoes = {}) => Object.entries(condicoes).every(([campo, valores]) =>
   [].concat(valores).some((v) => (v === null ? linha[campo] == null : linha[campo] === v)));
 
+// Já vem com a memória curta do site (lib/cache-repo.js), para os testes passarem por ela também.
 export function criarRepoMemoria() {
+  return comCache(criarRepoMemoriaSemCache());
+}
+
+export function criarRepoMemoriaSemCache() {
   const t = { conversas: {}, mensagens: [], entregaArquivos: [], usuarios: {}, lojas: {}, dadosRecebimento: {}, produtos: {}, pedidos: {}, reembolsos: {}, debitos: {}, cotacoes: [], eventos: new Set(), docs: {}, arquivos: {}, contas: {}, trocas: [] };
   const copia = (x) => (x ? structuredClone(x) : null);
   const ultimasPorMoeda = (ate) => {
