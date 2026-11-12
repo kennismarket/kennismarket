@@ -18,7 +18,7 @@ import { rotasPrototipo } from './routes/prototipo.js';
 import { rotasChat } from './routes/chat.js';
 import { criarTravaContas } from './lib/trava-contas.js';
 import { montarPaginaPrototipo } from './lib/pagina-prototipo.js';
-import { cabecalhosSeguranca, CSP_PAGINA_OBSERVAR, rotaRelatorioCsp } from './lib/cabecalhos.js';
+import { cabecalhoCsp, cabecalhosSeguranca, CSP_PAGINA, rotaRelatorioCsp } from './lib/cabecalhos.js';
 import { config } from './config.js';
 
 const pastaPublica = fileURLToPath(new URL('../public', import.meta.url));
@@ -65,8 +65,9 @@ export function criarApp({ repo = repoPadrao, pagamentos = criarPagamentos(), pa
   app.use('/_blob', prototipo.blob);
 
   // A página do site é o protótipo (a navegação dele é feita no navegador, pelo # do endereço).
-  const cspPagina = CSP_PAGINA_OBSERVAR(config.supabase.url);
-  const enviarPagina = (_req, res) => res.set({ 'Cache-Control': 'no-cache', 'Content-Security-Policy-Report-Only': cspPagina }).type('html').send(paginaPrototipo.html);
+  const cspPagina = CSP_PAGINA(config.supabase.url);
+  const nomeCsp = cabecalhoCsp(); // ligada; CSP_MODO=observar ou desligado no Render muda sem código
+  const enviarPagina = (_req, res) => res.set({ 'Cache-Control': 'no-cache', ...(nomeCsp ? { [nomeCsp]: cspPagina } : {}) }).type('html').send(paginaPrototipo.html);
   app.get(['/', '/index.html'], enviarPagina);
   app.use(express.static(pastaPublica));
   app.get('*', enviarPagina);
