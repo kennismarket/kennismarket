@@ -107,11 +107,12 @@ test('8: proteções do navegador na página, na API e nos arquivos', async () =
   assert.equal(pagina.headers.get('x-content-type-options'), 'nosniff');
   assert.equal(pagina.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
   assert.match(pagina.headers.get('permissions-policy'), /camera=\(\)/);
-  const csp = pagina.headers.get('content-security-policy-report-only');
+  // regra de código LIGADA (bloqueia) desde 12/11/2026
+  const csp = pagina.headers.get('content-security-policy');
   assert.match(csp, /frame-ancestors 'self'/);
   assert.match(csp, /https:\/\/cdnjs\.cloudflare\.com/);
   assert.match(csp, /report-uri \/api\/csp/);
-  assert.equal(pagina.headers.get('content-security-policy'), null); // só observando, nada bloqueado
+  assert.equal(pagina.headers.get('content-security-policy-report-only'), null);
   // HTTPS: o navegador passa a usar sempre (atrás do Render, que avisa que a conexão é https)
   assert.equal(pagina.headers.get('strict-transport-security'), null);
   const segura = await fetch(base + '/', { headers: { 'X-Forwarded-Proto': 'https' } });
@@ -121,4 +122,12 @@ test('8: proteções do navegador na página, na API e nos arquivos', async () =
   // o navegador conta o que bloquearia
   const rel = await fetch(base + '/api/csp', { method: 'POST', headers: { 'Content-Type': 'application/csp-report' }, body: JSON.stringify({ 'csp-report': { 'violated-directive': 'script-src', 'blocked-uri': 'https://mal.example' } }) });
   assert.equal(rel.status, 204);
+});
+
+test('8: interruptor CSP_MODO no Render: ligado (padrão), observar ou desligado', async () => {
+  const { cabecalhoCsp } = await import('../server/lib/cabecalhos.js');
+  assert.equal(cabecalhoCsp(undefined), 'Content-Security-Policy');
+  assert.equal(cabecalhoCsp('qualquer'), 'Content-Security-Policy');
+  assert.equal(cabecalhoCsp(' Observar '), 'Content-Security-Policy-Report-Only');
+  assert.equal(cabecalhoCsp('desligado'), null);
 });
