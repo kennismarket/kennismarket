@@ -1,11 +1,19 @@
 import { Router } from 'express';
 import { config, avisos } from '../config.js';
 import { testarSupabase } from '../lib/supabase.js';
+import { conexoes } from '../lib/conexoes.js';
 
 const INICIO = new Date().toISOString(); // muda a cada reinício: mostra se a última mudança no Render já entrou
 
 // Página de checagem: mostra o que está configurado e testa a conexão com o Supabase.
 // Nunca mostra as chaves, só se estão preenchidas.
+// Quantas conexões estão abertas, em uso e quantas chamadas esperam na fila (todas as origens).
+function estatisticas() {
+  const st = conexoes.agente.stats || {};
+  const soma = (campo) => Object.values(st).reduce((t, o) => t + (o?.[campo] || 0), 0);
+  return { abertas: soma('connected'), emUso: soma('running'), naFila: soma('pending') };
+}
+
 export function rotasSaude({ pagamentos }) {
   const r = Router();
   r.get('/', async (_req, res) => {
@@ -25,6 +33,8 @@ export function rotasSaude({ pagamentos }) {
       },
       // Senha da tarefa diária das cotações (.github/workflows/tarefas.yml).
       tarefas: { token: config.tarefasToken ? 'preenchido' : 'NÃO PREENCHIDO' },
+      // conexões HTTP com o Supabase (lib/conexoes.js): limite, tempo para fechar as paradas e uso agora
+      conexoesSupabase: { maximo: conexoes.limites.maxConexoes, fechaParadaEmMs: conexoes.limites.ociosaMs, ...estatisticas() },
       noArDesde: INICIO,
       pagamentos: pagamentos.situacao(),
       avisos,

@@ -2,9 +2,8 @@
 // Os testes trocam este arquivo por uma versão em memória (tests/apoio/repo-memoria.js)
 // com as mesmas funções.
 import crypto from 'node:crypto';
-import { createClient } from '@supabase/supabase-js';
 import { config } from '../config.js';
-import { supabaseAdmin } from './supabase.js';
+import { clienteDeLogin, supabaseAdmin } from './supabase.js';
 
 const PASTA = 'prototipo'; // pasta do Storage com os arquivos do protótipo
 // Situações de pedido em que o cliente já pagou (e pode receber os arquivos de entrega).
@@ -84,7 +83,7 @@ export const repo = {
   // Confere e-mail e senha. Devolve a sessão (tokens), { banida: true } ou null se não baterem.
   async entrarComSenha(email, senha) {
     if (!config.supabase.publishableKey) throw Object.assign(new Error('SUPABASE_PUBLISHABLE_KEY não configurada'), { status: 503 });
-    const anon = createClient(config.supabase.url, config.supabase.publishableKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const anon = clienteDeLogin();
     const { data, error } = await anon.auth.signInWithPassword({ email, password: senha });
     if (error && (error.code === 'user_banned' || /banned/i.test(error.message))) return { banida: true };
     if (error || !data?.session) return null;
@@ -411,7 +410,7 @@ export const repo = {
   async prepararDadosTeste() {
     if (!config.supabase.publishableKey) throw Object.assign(new Error('SUPABASE_PUBLISHABLE_KEY não configurada'), { status: 503 });
     const contas = { cliente: 'Cliente de Teste', vendedor: 'Vendedora de Teste', dono: 'Dono de Teste' };
-    const anon = createClient(config.supabase.url, config.supabase.publishableKey, { auth: { persistSession: false } });
+    const anon = clienteDeLogin();
     const existentes = checar(await db().auth.admin.listUsers({ page: 1, perPage: 1000 })).users;
     const tokens = {};
     const ids = {};

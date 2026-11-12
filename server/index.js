@@ -2,6 +2,7 @@ import { config, avisos } from './config.js';
 import { criarApp } from './app.js';
 import { espelharTodas } from './lib/espelho-lojas.js';
 import { repo } from './lib/repo.js';
+import { conexoes } from './lib/conexoes.js';
 import { aplicarLogosOficiais } from './lib/logos-lojas.js';
 import { separarProdutosDasLojas } from './lib/ids-produtos.js';
 
@@ -12,7 +13,7 @@ if (app.locals.prototipoFaltando.length) {
   avisos.push(`O protótipo mudou e estes ajustes não foram aplicados: ${app.locals.prototipoFaltando.join(', ')}.`);
 }
 
-app.listen(config.porta, () => {
+const servidor = app.listen(config.porta, () => {
   avisos.forEach((a) => console.warn('ATENÇÃO:', a));
   console.log(`Kennismarket rodando em http://localhost:${config.porta} (pagamentos: ${pagamentos.provedor})`);
   // Tarefas ao ligar, uma depois da outra (as duas primeiras regravam lojas: juntas, uma apagaria a outra).
@@ -37,3 +38,13 @@ app.listen(config.porta, () => {
     } catch (e) { console.error('cópia das lojas falhou:', e.message); }
   })();
 });
+
+// Desligar com calma (o Render manda SIGTERM a cada publicação): para de aceitar visitas, termina as
+// que estão em andamento e fecha as conexões com o Supabase. Se demorar mais de 10 s, sai assim mesmo.
+for (const sinal of ['SIGTERM', 'SIGINT']) {
+  process.once(sinal, () => {
+    console.log(`${sinal}: desligando`);
+    setTimeout(() => process.exit(0), 10_000).unref();
+    servidor.close(() => conexoes.fechar().finally(() => process.exit(0)));
+  });
+}
